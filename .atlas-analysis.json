@@ -1,0 +1,108 @@
+{
+  "projectType": "saas",
+  "projectName": "ArcHive",
+  "projectDescription": "A multi-platform digital capture tool designed to be your personal second brain for managing notes, links, and code snippets.",
+  "theme": "palm",
+  "primaryColor": "#6366F1",
+  "lightColor": "#818CF8",
+  "darkColor": "#4F46E5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/content-capture",
+              "features/intelligent-parsing",
+              "features/organization",
+              "features/platform-categorization",
+              "features/search",
+              "features/profile-management"
+            ]
+          },
+          {
+            "group": "Platforms",
+            "pages": [
+              "platforms/mobile-app",
+              "platforms/chrome-extension",
+              "platforms/web-dashboard"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/introduction",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/auth",
+              "api/content",
+              "api/users",
+              "api/platforms"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Deployment",
+        "groups": [
+          {
+            "group": "Self-Hosting",
+            "pages": [
+              "deployment/overview",
+              "deployment/prerequisites",
+              "deployment/backend",
+              "deployment/database",
+              "deployment/configuration",
+              "deployment/monitoring"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Multi-content support for text, links, and code snippets",
+    "Intelligent content parsing with platform-specific extractors",
+    "Automated tagging using NLP",
+    "Full-text search with keyword highlighting",
+    "Platform categorization and filtering",
+    "Screenshot generation for saved links",
+    "User profiles with usage statistics",
+    "Chrome extension for quick saving",
+    "Mobile app for iOS and Android"
+  ],
+  "publicApiSurface": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "POST /api/auth/refresh",
+    "POST /api/auth/logout",
+    "POST /api/content",
+    "GET /api/content",
+    "GET /api/content/:id",
+    "PUT /api/content/:id",
+    "DELETE /api/content/:id",
+    "GET /api/content/platforms",
+    "GET /api/users/profile",
+    "PUT /api/users/profile",
+    "PUT /api/users/profile/picture",
+    "GET /api/users/stats"
+  ]
+}
