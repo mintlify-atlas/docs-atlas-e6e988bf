@@ -8,8 +8,8 @@ All user endpoints require JWT authentication and are protected by the token bla
 ## Get User Profile
 
 <RequestExample>
-```bash GET /api/users/profile
-curl -X GET "https://api.archive.com/api/users/profile" \
+```bash GET /api/user/profile
+curl -X GET "https://api.archive.com/api/user/profile" \
   -H "Authorization: Bearer {accessToken}"
 ```
 </RequestExample>
@@ -60,8 +60,8 @@ Retrieve the authenticated user's profile information.
 ## Update User Profile
 
 <RequestExample>
-```bash PUT /api/users/profile
-curl -X PUT "https://api.archive.com/api/users/profile" \
+```bash PUT /api/user/profile
+curl -X PUT "https://api.archive.com/api/user/profile" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer {accessToken}" \
   -d '{
@@ -120,8 +120,8 @@ All fields are optional. Only provide the fields you want to update.
 ## Update Profile Picture
 
 <RequestExample>
-```bash PUT /api/users/profile-picture
-curl -X PUT "https://api.archive.com/api/users/profile-picture" \
+```bash PUT /api/user/profile-picture
+curl -X PUT "https://api.archive.com/api/user/profile-picture" \
   -H "Authorization: Bearer {accessToken}" \
   -F "profilePicture=@/path/to/image.jpg"
 ```
@@ -171,8 +171,8 @@ Upload and update the authenticated user's profile picture. Accepts multipart fo
 ## Get User Statistics
 
 <RequestExample>
-```bash GET /api/users/stats
-curl -X GET "https://api.archive.com/api/users/stats" \
+```bash GET /api/user/stats
+curl -X GET "https://api.archive.com/api/user/stats" \
   -H "Authorization: Bearer {accessToken}"
 ```
 </RequestExample>

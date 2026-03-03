@@ -100,9 +100,9 @@
     "PUT /api/content/:id",
     "DELETE /api/content/:id",
     "GET /api/content/platforms",
-    "GET /api/users/profile",
-    "PUT /api/users/profile",
-    "PUT /api/users/profile/picture",
-    "GET /api/users/stats"
+    "GET /api/user/profile",
+    "PUT /api/user/profile",
+    "PUT /api/user/profile-picture",
+    "GET /api/user/stats"
   ]
 }
