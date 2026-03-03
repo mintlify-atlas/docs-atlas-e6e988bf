@@ -1,80 +1,343 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart guide
+description: Get started with ArcHive in minutes - from account creation to saving your first content
 ---
 
-## Get started in three steps
+## Welcome to ArcHive
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through setting up your ArcHive account and saving your first piece of content. By the end, you'll have a fully functional personal knowledge management system.
 
-### Step 1: Set up your local environment
+<Note>
+  ArcHive offers multiple ways to capture content: mobile app, Chrome extension, and soon a web dashboard. This guide covers the mobile app and Chrome extension setup.
+</Note>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+## Choose your platform
+
+<CardGroup cols={2}>
+  <Card title="Mobile app" icon="mobile" href="#mobile-app-setup">
+    iOS and Android support with React Native
+  </Card>
+  <Card title="Chrome extension" icon="chrome" href="#chrome-extension-setup">
+    Save web pages directly from your browser
+  </Card>
+</CardGroup>
+
+## Mobile app setup
+
+<Steps>
+  <Step title="Download the app">
+    Download ArcHive from your device's app store:
+    - **iOS**: Available on the App Store
+    - **Android**: Available on Google Play Store
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    <Note>
+      If you're building from source, clone the repository and navigate to the `archive` folder, then run `npm start` to launch the Expo development server.
+    </Note>
+  </Step>
+
+  <Step title="Create your account">
+    Launch the app and tap "Create Account" to register.
+
+    Provide the following information:
+    - **Email address** - Your primary email for login
+    - **Password** - A secure password for your account
+    - **First name** - Your first name for personalization
+    - **Last name** - Your last name
+
+    The API endpoint for registration is:
+    ```bash
+    POST /api/auth/register
+    ```
+
+    Your account will be created and you'll receive JWT tokens for authentication.
+  </Step>
+
+  <Step title="Complete your profile">
+    After registration, you can customize your profile:
+    - Upload a profile picture (stored on Cloudinary)
+    - Update your first and last name
+    - View your usage statistics
+
+    Navigate to the Profile tab to access these settings.
+  </Step>
+
+  <Step title="Save your first content">
+    Now let's add your first item to ArcHive. Tap the Floating Action Button (FAB) to create new content.
+
+    ### Saving a text note
+
+    <Steps>
+      <Step title="Select 'Text' type">
+        Choose Text from the content type options.
+      </Step>
+      <Step title="Enter your note">
+        - Add a title (optional)
+        - Write your note content
+        - Add tags for organization (manual or auto-suggested)
+      </Step>
+      <Step title="Save">
+        Tap Save and your note is archived!
+      </Step>
+    </Steps>
+
+    ### Saving a web link
+
+    <Steps>
+      <Step title="Select 'Link' type">
+        Choose Link from the content type options.
+      </Step>
+      <Step title="Paste the URL">
+        Enter the web page URL you want to save.
+        
+        ArcHive will automatically:
+        - Extract the page title and description
+        - Generate a screenshot preview
+        - Detect the platform (GitHub, YouTube, Twitter, etc.)
+        - Suggest relevant tags using NLP
+      </Step>
+      <Step title="Review and save">
+        Review the extracted metadata and tap Save.
+      </Step>
+    </Steps>
+
+    ### Saving a code snippet
+
+    <Steps>
+      <Step title="Select 'Code' type">
+        Choose Code from the content type options.
+      </Step>
+      <Step title="Add your code">
+        - Enter a descriptive title
+        - Paste your code snippet
+        - Add language or framework tags
+      </Step>
+      <Step title="Save">
+        Your code is now archived for future reference!
+      </Step>
+    </Steps>
+  </Step>
+
+  <Step title="Share content from other apps">
+    ArcHive supports iOS and Android share functionality:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    1. Find content you want to save in any app (browser, social media, etc.)
+    2. Tap the Share button
+    3. Select ArcHive from the share sheet
+    4. The content will be automatically saved to your archive
 
-### Step 2: Deploy your changes
+    <Note>
+      Deep linking is supported - you can open content directly in ArcHive via shared links.
+    </Note>
+  </Step>
+</Steps>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+## Chrome extension setup
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+<Steps>
+  <Step title="Install the extension">
+    ### From source (development)
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    <CodeGroup>
+    ```bash Clone repository
+    git clone https://github.com/atharvdange618/ArcHive.git
+    cd ArcHive/web
+    ```
 
-### Step 3: Go live
+    ```bash Load in Chrome
+    # 1. Open Chrome and navigate to chrome://extensions/
+    # 2. Enable "Developer mode" (toggle in top-right)
+    # 3. Click "Load unpacked"
+    # 4. Select the 'web' folder from ArcHive repository
+    ```
+    </CodeGroup>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    ### From Chrome Web Store
+    Coming soon - the extension will be available for one-click installation.
+  </Step>
+
+  <Step title="Login to your account">
+    Click the ArcHive extension icon in your Chrome toolbar.
+
+    Enter your credentials:
+    - **Email** - The email you registered with
+    - **Password** - Your account password
+
+    Click "Login" to authenticate.
+
+    <Note>
+      The extension uses JWT-based authentication with automatic token refresh. Your session will persist across browser restarts.
+    </Note>
+  </Step>
+
+  <Step title="Save your first webpage">
+    Now you're ready to start archiving web content:
+
+    1. Navigate to any webpage you want to save
+    2. Click the ArcHive extension icon
+    3. Click "Save Current Page"
+    4. You'll see a success message when saved
+
+    The extension will automatically:
+    - Extract page metadata (title, description)
+    - Generate relevant tags using NLP
+    - Make the content accessible in your mobile app
+  </Step>
+</Steps>
+
+## Search and organize your content
+
+Once you've saved some content, here's how to find it:
+
+<Steps>
+  <Step title="Use full-text search">
+    The search bar scans all your content, not just titles. Matching keywords are highlighted for context.
+  </Step>
+
+  <Step title="Filter by content type">
+    Use the filter options to show:
+    - All content
+    - Links only
+    - Text notes only
+    - Code snippets only
+  </Step>
+
+  <Step title="Browse by platform">
+    Navigate to the Browse tab to see content organized by platform:
+    - GitHub repositories
+    - YouTube videos
+    - Twitter/X posts
+    - Instagram links
+    - And more
+
+    Platform statistics show you how many items you've saved from each source.
+  </Step>
+
+  <Step title="View recent searches">
+    Quick access to your search history helps you navigate back to previous queries faster.
+  </Step>
+</Steps>
+
+## Managing your content
+
+ArcHive makes it easy to maintain your knowledge base:
+
+- **View details** - Tap any item to see full content, metadata, and tags
+- **Edit items** - Update titles, descriptions, or tags
+- **Delete content** - Remove items you no longer need
+- **Update profile** - Manage your account settings and view statistics
+
+<Note>
+  Your profile screen shows real-time statistics including total items saved and breakdown by content type (links, text, code).
+</Note>
+
+## API configuration
+
+The default API endpoint for ArcHive is:
+
+```
+https://api.archive.atharvdangedev.in/api
+```
+
+For local development, you can configure the extension to use:
+
+```javascript
+const API_BASE = "http://localhost:3000/api";
+```
+
+Edit the `API_BASE` constant in `background.js` for the Chrome extension.
+
+## Authentication flow
+
+ArcHive uses secure JWT-based authentication:
+
+1. User registers or logs in via `/api/auth/register` or `/api/auth/login`
+2. Server returns access token and refresh token
+3. Access token is included in all API requests
+4. When access token expires, refresh token automatically renews it
+5. Tokens are securely stored in device storage (mobile) or Chrome storage (extension)
+
+<CodeGroup>
+```json Register request
+{
+  "email": "user@example.com",
+  "password": "securepassword",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+```
+
+```json Login request
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+```
+
+```json Auth response
+{
+  "message": "Login successful!",
+  "user": {
+    "id": "...",
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe"
+  },
+  "accessToken": "eyJhbGc...",
+  "refreshToken": "eyJhbGc..."
+}
+```
+</CodeGroup>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card
+    title="Mobile app guide"
+    icon="mobile"
+    href="/platforms/mobile-app"
+  >
+    Deep dive into mobile app features and configuration
+  </Card>
+  <Card
+    title="Chrome extension guide"
+    icon="chrome"
+    href="/platforms/chrome-extension"
+  >
+    Advanced extension features and customization
+  </Card>
+  <Card
+    title="API reference"
+    icon="code"
+    href="/api/introduction"
+  >
+    Complete API documentation for developers
+  </Card>
+  <Card
+    title="Web dashboard"
+    icon="globe"
+    href="/platforms/web-dashboard"
+  >
+    Explore the upcoming web dashboard and roadmap
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Troubleshooting
+
+### Mobile app issues
+
+- **Can't log in**: Verify your email and password, check internet connection
+- **Content not saving**: Ensure you're authenticated and have network connectivity
+- **Share not working**: Grant ArcHive permissions to access shared content
+
+### Chrome extension issues
+
+- **"Login failed" error**: Verify credentials and check that the backend API is accessible
+- **"Please login first"**: Your session may have expired, log in again
+- **Extension not appearing**: Enable Developer mode in `chrome://extensions/` and reload the extension
+
+### General issues
+
+- **Screenshot generation slow**: Screenshots are processed in background queues using BullMQ, they may take a few moments to appear
+- **Tags not auto-generating**: Tag generation uses NLP and runs asynchronously, refresh after a few seconds
+
+For additional support, check the [GitHub repository](https://github.com/atharvdange618/ArcHive) or open an issue.

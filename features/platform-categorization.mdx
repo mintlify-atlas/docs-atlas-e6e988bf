@@ -1,0 +1,381 @@
+---
+title: Platform Categorization
+description: Discover how ArcHive automatically categorizes content by platform and lets you browse by source
+---
+
+ArcHive automatically detects and categorizes your saved links by their source platform, making it easy to find all content from specific websites or services.
+
+## Automatic Platform Detection
+
+When you save a link, ArcHive automatically identifies the platform:
+
+```typescript
+export const extractPlatformFromUrl = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+
+    const domain = hostname.replace(/^www\./, "");
+
+    if (domain.includes("github.com")) return PLATFORMS.GITHUB;
+    if (domain.includes("youtube.com") || domain.includes("youtu.be"))
+      return PLATFORMS.YOUTUBE;
+    if (domain.includes("twitter.com") || domain.includes("x.com"))
+      return PLATFORMS.TWITTER;
+    if (domain.includes("instagram.com")) return PLATFORMS.INSTAGRAM;
+    if (domain.includes("linkedin.com")) return PLATFORMS.LINKEDIN;
+    // ... more platforms
+
+    // For unknown platforms, use the domain name
+    const parts = domain.split(".");
+    if (parts.length >= 2) {
+      return parts.slice(-2).join(".");
+    }
+
+    return domain || PLATFORMS.OTHER;
+  } catch (error) {
+    return PLATFORMS.OTHER;
+  }
+};
+```
+
+**Source:** `backend/src/constants/platforms.ts:26-67`
+
+## Supported Platforms
+
+ArcHive has built-in support for major platforms:
+
+<CardGroup cols={4}>
+  <Card title="GitHub" icon="github">
+    Code repositories and projects
+  </Card>
+  <Card title="YouTube" icon="youtube">
+    Videos and channels
+  </Card>
+  <Card title="Twitter/X" icon="x-twitter">
+    Tweets and threads
+  </Card>
+  <Card title="Instagram" icon="instagram">
+    Posts and reels
+  </Card>
+  <Card title="LinkedIn" icon="linkedin">
+    Professional content
+  </Card>
+  <Card title="Reddit" icon="reddit">
+    Discussions and posts
+  </Card>
+  <Card title="Medium" icon="medium">
+    Articles and stories
+  </Card>
+  <Card title="Stack Overflow" icon="stack-overflow">
+    Q&A and solutions
+  </Card>
+  <Card title="Facebook" icon="facebook">
+    Social content
+  </Card>
+  <Card title="TikTok" icon="tiktok">
+    Short-form videos
+  </Card>
+  <Card title="Twitch" icon="twitch">
+    Streams and clips
+  </Card>
+  <Card title="Pinterest" icon="pinterest">
+    Images and boards
+  </Card>
+  <Card title="Vimeo" icon="vimeo">
+    Videos and films
+  </Card>
+  <Card title="Discord" icon="discord">
+    Community content
+  </Card>
+  <Card title="Telegram" icon="telegram">
+    Messages and channels
+  </Card>
+  <Card title="Custom" icon="globe">
+    Any other website
+  </Card>
+</CardGroup>
+
+<Info>
+For platforms not in the predefined list, ArcHive automatically uses the domain name (e.g., "example.com") as the platform identifier.
+</Info>
+
+## Platform Constants
+
+Platform identifiers are defined as constants:
+
+```typescript
+export const PLATFORMS = {
+  GITHUB: "github",
+  YOUTUBE: "youtube",
+  TWITTER: "twitter",
+  INSTAGRAM: "instagram",
+  LINKEDIN: "linkedin",
+  REDDIT: "reddit",
+  MEDIUM: "medium",
+  STACKOVERFLOW: "stackoverflow",
+  FACEBOOK: "facebook",
+  TIKTOK: "tiktok",
+  TWITCH: "twitch",
+  PINTEREST: "pinterest",
+  VIMEO: "vimeo",
+  DISCORD: "discord",
+  TELEGRAM: "telegram",
+  OTHER: "other",
+} as const;
+```
+
+**Source:** `backend/src/constants/platforms.ts:1-18`
+
+## Retrieving Platform Statistics
+
+Get a breakdown of your content by platform:
+
+```typescript
+contentRoutes.get("/platforms", async (c) => {
+  const userId = c.get("user")?._id;
+
+  const platforms = await getPlatforms(userId);
+  return c.json(
+    {
+      message: "Platforms retrieved successfully",
+      platforms: platforms,
+    },
+    200,
+  );
+});
+```
+
+**Source:** `backend/src/routes/content.ts:142-161`
+
+### Platform Aggregation
+
+The platform statistics are calculated using MongoDB aggregation:
+
+```typescript
+async function getPlatforms(userId: string) {
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
+  const platformStats = await ContentItem.aggregate([
+    {
+      $match: {
+        userId: userObjectId,
+        platform: { $ne: null },
+      },
+    },
+    {
+      $group: {
+        _id: "$platform",
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { count: -1 },
+    },
+    {
+      $project: {
+        _id: 0,
+        platform: "$_id",
+        count: 1,
+      },
+    },
+  ]);
+
+  return platformStats;
+}
+```
+
+**Source:** `backend/src/services/content.service.ts:296-330`
+
+**Response Format:**
+```json
+{
+  "message": "Platforms retrieved successfully",
+  "platforms": [
+    { "platform": "github", "count": 42 },
+    { "platform": "youtube", "count": 28 },
+    { "platform": "medium", "count": 15 }
+  ]
+}
+```
+
+## Browse by Platform
+
+The mobile app includes a dedicated Browse screen for platform-based navigation:
+
+### Browse Screen UI Flow
+
+<Steps>
+  <Step title="Access Browse Tab">
+    Navigate to the Browse tab in the bottom navigation
+  </Step>
+  
+  <Step title="View Platform Statistics">
+    See all platforms with saved content and item counts:
+    
+    ```typescript
+    const { data: platforms, isLoading, error, refetch } = useQuery({
+      queryKey: ["platforms"],
+      queryFn: getPlatforms,
+    });
+    ```
+    
+    **Source:** `archive/app/(tabs)/browse.tsx:18-26`
+  </Step>
+  
+  <Step title="Select a Platform">
+    Tap any platform card to view all content from that source
+  </Step>
+  
+  <Step title="Browse Platform Content">
+    The platform-specific view shows all your saved items from that platform, with the same search and filtering capabilities
+  </Step>
+</Steps>
+
+### Platform Card Component
+
+Each platform is displayed as an interactive card:
+
+```typescript
+<FlatList
+  data={platforms}
+  keyExtractor={(item) => item.platform}
+  renderItem={({ item }) => (
+    <PlatformCard platform={item.platform} count={item.count} />
+  )}
+  contentContainerStyle={styles.list}
+  refreshControl={
+    <RefreshControl
+      refreshing={isRefetching}
+      onRefresh={refetch}
+      tintColor={Colors.light.tint}
+    />
+  }
+/>
+```
+
+**Source:** `archive/app/(tabs)/browse.tsx:60-74`
+
+<Tip>
+The Browse screen supports pull-to-refresh to update platform statistics in real-time.
+</Tip>
+
+## Filtering by Platform
+
+You can filter your content by platform using the API:
+
+### Platform Query Parameter
+
+```typescript
+const searchContentQuerySchema = z.object({
+  q: z.string().trim().min(1, "Search query cannot be empty").optional(),
+  type: z.nativeEnum(ContentType).optional(),
+  tag: z.string().trim().min(1, "Tag cannot be empty").optional(),
+  platform: z.string().trim().min(1, "Platform cannot be empty").optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20).optional(),
+  page: z.coerce.number().int().min(1).default(1).optional(),
+}).partial();
+```
+
+**Source:** `backend/src/validation/content.validation.ts:101-110`
+
+### Example API Request
+
+```bash
+GET /api/content?platform=github&limit=20&page=1
+```
+
+This returns all GitHub repositories you've saved.
+
+### Platform Filter Implementation
+
+```typescript
+if (platform) {
+  findCriteria.platform = platform;
+}
+
+const contents = await ContentItem.find(findCriteria)
+  .sort({ createdAt: -1 })
+  .skip(skip)
+  .limit(limit);
+```
+
+**Source:** `backend/src/services/content.service.ts:158-170`
+
+## Platform-Specific Metadata
+
+Each platform parser extracts platform-specific metadata:
+
+<Accordion title="GitHub Metadata">
+  - Repository full name (owner/repo)
+  - Repository description
+  - Official repository URL
+  - Platform: "github"
+</Accordion>
+
+<Accordion title="YouTube Metadata">
+  - Video title
+  - High-resolution thumbnail
+  - Video URL
+  - Platform: "youtube"
+</Accordion>
+
+<Accordion title="Twitter/X Metadata">
+  - Tweet/post title
+  - Description/content
+  - Preview image
+  - Platform: "twitter"
+</Accordion>
+
+## Platform Visual Badges
+
+<Note>
+In the mobile app, platform badges appear on content cards with platform-specific icons and colors for quick visual identification.
+</Note>
+
+**UI Implementation:**
+- Each platform has a dedicated icon (from FontAwesome5)
+- Platform name appears as a badge
+- Tapping a platform badge navigates to the platform-specific browse view
+
+## Database Indexing
+
+For optimal query performance, ArcHive maintains a compound index on user and platform:
+
+```typescript
+ContentItemSchema.index({ userId: 1, platform: 1 });
+```
+
+**Source:** `backend/src/db/models/ContentItem.ts:100`
+
+This index enables fast queries like:
+- "Show all my YouTube videos"
+- "Find my GitHub repositories"
+- "List all Medium articles I've saved"
+
+## Empty State Handling
+
+When no content exists for a platform:
+
+```typescript
+if (!platforms || platforms.length === 0) {
+  return (
+    <View style={styles.container}>
+      <EmptyState type="default" />
+    </View>
+  );
+}
+```
+
+**Source:** `archive/app/(tabs)/browse.tsx:44-50`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Search" icon="search" href="/features/search">
+    Learn about full-text search capabilities
+  </Card>
+  <Card title="Intelligent Parsing" icon="brain" href="/features/intelligent-parsing">
+    See how metadata is extracted
+  </Card>
+</CardGroup>

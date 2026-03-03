@@ -1,0 +1,300 @@
+---
+title: Chrome Extension
+description: Save web pages to your ArcHive knowledge base with a single click using the Chrome browser extension
+---
+
+The ArcHive Chrome extension allows you to quickly save web pages to your personal knowledge management system without switching apps. Simply click the extension icon while browsing any webpage to instantly archive it with automatic metadata extraction and tagging.
+
+## Features
+
+### Quick Save
+
+Save the current webpage to your ArcHive collection with a single click. The extension automatically:
+- Extracts page title and description
+- Generates relevant tags using NLP
+- Captures the URL and metadata
+- Makes content accessible across all ArcHive platforms
+
+### User Authentication
+
+Secure login with JWT-based authentication ensures your saved content is protected and private.
+
+### Automatic Token Refresh
+
+Seamlessly handles token expiration and renewal in the background, so you never have to re-login unnecessarily.
+
+### Persistent Sessions
+
+Stay logged in across browser sessions. Your authentication state is securely stored in Chrome's local storage.
+
+### Clean UI
+
+Simple, intuitive interface for quick interactions - no clutter, just the functionality you need.
+
+## Installation
+
+### From Source (Development)
+
+<Steps>
+  <Step title="Clone the ArcHive repository">
+    ```bash
+    git clone https://github.com/atharvdange618/ArcHive.git
+    cd ArcHive/web
+    ```
+  </Step>
+  
+  <Step title="Load the extension in Chrome">
+    1. Open Chrome and navigate to `chrome://extensions/`
+    2. Enable "Developer mode" (toggle in top-right corner)
+    3. Click "Load unpacked"
+    4. Select the `web` folder from the ArcHive repository
+  </Step>
+  
+  <Step title="Verify installation">
+    The ArcHive extension icon should now appear in your Chrome toolbar.
+  </Step>
+</Steps>
+
+### From Chrome Web Store
+
+<Note>
+The extension is currently under review and will be available on the Chrome Web Store soon. Check back for updates!
+</Note>
+
+## Usage
+
+### First Time Setup
+
+<Steps>
+  <Step title="Open the extension">
+    Click the ArcHive extension icon in your Chrome toolbar.
+  </Step>
+  
+  <Step title="Login to your account">
+    Enter your email and password in the login form, then click "Login".
+    
+    <Note>
+    Don't have an account yet? Download the ArcHive mobile app to create one.
+    </Note>
+  </Step>
+  
+  <Step title="Start saving pages">
+    You're all set! You can now save any webpage with a single click.
+  </Step>
+</Steps>
+
+### Saving Pages
+
+Once logged in:
+
+1. Navigate to any webpage you want to save
+2. Click the ArcHive extension icon in your toolbar
+3. Click "Save Current Page"
+4. You'll see a success message when the page is saved
+
+The saved link will automatically:
+- Extract metadata (title, description)
+- Generate relevant tags using NLP
+- Be accessible in your ArcHive mobile app and web dashboard
+- Include a screenshot for visual reference
+
+### Logout
+
+Click the "Logout" button in the extension popup to sign out of your account. Your credentials will be cleared from Chrome's secure storage.
+
+## Configuration
+
+### API Endpoint
+
+The extension is configured to connect to:
+
+```javascript
+https://api.archive.atharvdangedev.in/api
+```
+
+### Using a Custom Endpoint
+
+To use a different API endpoint (e.g., for local development):
+
+<Steps>
+  <Step title="Open background.js">
+    Navigate to the `web` folder and open `background.js` in your code editor.
+  </Step>
+  
+  <Step title="Update API_BASE constant">
+    ```javascript
+    const API_BASE = "http://localhost:3000/api"; // Your local endpoint
+    ```
+  </Step>
+  
+  <Step title="Reload the extension">
+    1. Go to `chrome://extensions/`
+    2. Click the refresh icon on the ArcHive extension card
+    3. Test your changes
+  </Step>
+</Steps>
+
+<Warning>
+When using a local development endpoint, ensure your backend server is running and accessible.
+</Warning>
+
+## Architecture
+
+### Files
+
+The extension consists of five main files:
+
+- **manifest.json**: Extension configuration and permissions
+- **popup.html**: Extension popup interface structure
+- **popup.css**: Styling for the popup UI
+- **popup.js**: Frontend logic for the popup (UI interactions)
+- **background.js**: Background service worker (API requests, authentication)
+
+### Authentication Flow
+
+1. User enters credentials in the popup interface
+2. `popup.js` sends a LOGIN message to the background service worker
+3. `background.js` makes an API request to `/auth/login`
+4. Access token and refresh token are stored in `chrome.storage.local`
+5. All subsequent API requests include the access token in headers
+6. If the access token expires (401 response), the background worker automatically refreshes it using the refresh token
+7. The new access token is stored and the original request is retried
+
+### Permissions
+
+The extension requires the following permissions:
+
+| Permission | Purpose |
+|------------|----------|
+| `activeTab` | Access current tab URL for saving |
+| `tabs` | Query active tabs to get page information |
+| `storage` | Store authentication tokens locally |
+| `host_permissions` | Make API requests to ArcHive backend |
+
+## Development
+
+### Making Changes
+
+After modifying any extension files:
+
+<Steps>
+  <Step title="Navigate to extensions page">
+    Go to `chrome://extensions/` in Chrome.
+  </Step>
+  
+  <Step title="Reload the extension">
+    Click the refresh icon on the ArcHive extension card.
+  </Step>
+  
+  <Step title="Test your changes">
+    Click the extension icon and verify your changes work as expected.
+  </Step>
+</Steps>
+
+### Debugging
+
+**Debugging the Popup**
+
+1. Right-click the extension icon in your toolbar
+2. Select "Inspect popup"
+3. Chrome DevTools will open with console and network tabs
+
+**Debugging the Background Worker**
+
+1. Go to `chrome://extensions/`
+2. Find the ArcHive extension
+3. Click "Inspect views: service worker"
+4. Chrome DevTools will open for the background script
+
+<Tip>
+Use `console.log()` statements in your code to debug issues. They'll appear in the respective DevTools console.
+</Tip>
+
+## Security Notes
+
+### Secure Communication
+
+- All credentials are sent exclusively over HTTPS
+- No sensitive data is transmitted over insecure connections
+- The extension validates SSL certificates
+
+### Token Storage
+
+- Access tokens and refresh tokens are stored in Chrome's secure `chrome.storage.local`
+- Tokens are automatically cleared on logout
+- No credentials are stored in plain text
+
+### Password Handling
+
+- Password fields are cleared immediately after successful login
+- Passwords are never logged or stored locally
+- Only secure password input fields are used
+
+### Best Practices
+
+<Warning>
+- Never share your authentication tokens
+- Always logout on shared computers
+- Keep your extension updated to the latest version
+- Report any security concerns immediately
+</Warning>
+
+## Troubleshooting
+
+### "Login failed" Error
+
+**Possible causes:**
+- Incorrect email or password
+- Backend API is down or unreachable
+- Network connectivity issues
+
+**Solutions:**
+- Verify your credentials are correct
+- Check that the backend API is running at the configured endpoint
+- Ensure you have an active internet connection
+- Try resetting your password via the mobile app
+
+### "Please login first" Message
+
+This message appears when:
+- Your session has expired
+- Authentication tokens have been cleared
+- You've logged out from another device
+
+**Solution:**
+Simply click the extension icon and log in again.
+
+### Extension Not Appearing
+
+**Solutions:**
+1. Ensure "Developer mode" is enabled in `chrome://extensions/`
+2. Try reloading the extension
+3. Check the browser console for errors during loading
+4. Verify all extension files are present in the `web` folder
+5. Restart Chrome and try again
+
+### Save Not Working
+
+**Check these:**
+- You're logged in (click the extension icon to verify)
+- The page URL is valid and accessible
+- Your internet connection is active
+- The backend API is responding (check Network tab in DevTools)
+
+### Token Refresh Failures
+
+If automatic token refresh isn't working:
+1. Clear your tokens by logging out
+2. Log in again to get fresh tokens
+3. If the issue persists, check the background worker console for errors
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Mobile App" icon="mobile" href="/platforms/mobile-app">
+    Capture content on the go
+  </Card>
+  <Card title="Web Dashboard" icon="globe" href="/platforms/web-dashboard">
+    Manage your archive from desktop
+  </Card>
+</CardGroup>

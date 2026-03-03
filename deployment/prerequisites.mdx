@@ -1,0 +1,249 @@
+---
+title: Prerequisites
+description: System requirements and software installation for self-hosting ArcHive
+---
+
+Before deploying ArcHive, you need to install and configure several prerequisite software components.
+
+## Server Requirements
+
+### VPS Specifications
+- **CPU**: 1 vCPU Core (minimum)
+- **RAM**: 4 GB (minimum)
+- **Storage**: 50 GB NVMe/SSD
+- **Bandwidth**: 4 TB
+- **OS**: Ubuntu 22.04 LTS (recommended)
+
+### Network Requirements
+- Public IP address
+- Domain name with DNS access
+- Ports 80 (HTTP) and 443 (HTTPS) accessible
+
+## Initial Server Setup
+
+### Connect to Your VPS
+
+```bash
+ssh root@your-vps-ip
+# Or if you created a user during setup:
+ssh your-user@your-vps-ip
+```
+
+### Update System Packages
+
+```bash
+sudo apt update
+sudo apt upgrade -y
+```
+
+### Install Essential Tools
+
+```bash
+sudo apt install -y git curl wget build-essential
+```
+
+## Install Node.js
+
+ArcHive requires Node.js 20 LTS.
+
+<Steps>
+  <Step title="Add NodeSource Repository">
+    ```bash
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    ```
+  </Step>
+  <Step title="Install Node.js">
+    ```bash
+    sudo apt install -y nodejs
+    ```
+  </Step>
+  <Step title="Verify Installation">
+    ```bash
+    node --version  # Should show v20.x.x
+    npm --version
+    ```
+  </Step>
+</Steps>
+
+## Install Bun Runtime
+
+Bun is the JavaScript runtime used for the ArcHive backend.
+
+<Steps>
+  <Step title="Install Bun">
+    ```bash
+    curl -fsSL https://bun.sh/install | bash
+    ```
+  </Step>
+  <Step title="Add to PATH">
+    ```bash
+    echo 'export BUN_INSTALL="$HOME/.bun"' >> ~/.bashrc
+    echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> ~/.bashrc
+    source ~/.bashrc
+    ```
+  </Step>
+  <Step title="Verify Installation">
+    ```bash
+    bun --version
+    ```
+  </Step>
+</Steps>
+
+<Note>
+If deploying with a site user (e.g., via CloudPanel), install Bun for that user as well:
+```bash
+su - archive-api
+curl -fsSL https://bun.sh/install | bash
+source ~/.bashrc
+```
+</Note>
+
+## Install PM2 Process Manager
+
+PM2 manages and monitors the Node.js application and background workers.
+
+```bash
+sudo npm install -g pm2
+
+# Verify installation
+pm2 --version
+```
+
+## Install Nginx Web Server
+
+Nginx serves as a reverse proxy for the backend API.
+
+<Steps>
+  <Step title="Install Nginx">
+    ```bash
+    sudo apt install -y nginx
+    ```
+  </Step>
+  <Step title="Start and Enable Nginx">
+    ```bash
+    sudo systemctl start nginx
+    sudo systemctl enable nginx
+    ```
+  </Step>
+  <Step title="Verify Status">
+    ```bash
+    sudo systemctl status nginx
+    ```
+  </Step>
+</Steps>
+
+<Note>
+If using CloudPanel, Nginx is pre-installed and managed automatically.
+</Note>
+
+## Domain Configuration
+
+Configure DNS records to point your domain to the VPS.
+
+### DNS Records
+
+In your domain registrar's DNS settings, add these records:
+
+| Type | Name | Value | TTL |
+|------|------|-------|-----|
+| A | @ | YOUR_VPS_IP | 3600 |
+| A | www | YOUR_VPS_IP | 3600 |
+| A | api | YOUR_VPS_IP | 3600 |
+
+**Example:**
+- Domain: `archive.example.com`
+- API: `api.archive.example.com`
+- WWW: `www.archive.example.com`
+
+### Verify DNS Propagation
+
+```bash
+# Check if DNS is propagated (run on your local machine)
+dig archive.example.com
+dig api.archive.example.com
+
+# Or use online tool: https://dnschecker.org
+```
+
+<Warning>
+DNS propagation can take 5 minutes to 48 hours. Wait for DNS to propagate before proceeding with SSL certificate setup.
+</Warning>
+
+## Configure Firewall
+
+Set up UFW (Uncomplicated Firewall) to secure your server.
+
+```bash
+# Allow SSH
+sudo ufw allow OpenSSH
+
+# Allow HTTP and HTTPS
+sudo ufw allow 'Nginx Full'
+
+# If using CloudPanel
+sudo ufw allow 8443/tcp
+
+# Enable firewall
+sudo ufw enable
+
+# Check status
+sudo ufw status
+```
+
+## Install Additional Dependencies
+
+### For Screenshot Worker (Puppeteer)
+
+```bash
+sudo apt install -y \
+  libnss3 \
+  libatk1.0-0 \
+  libatk-bridge2.0-0 \
+  libcups2 \
+  libdrm2 \
+  libxkbcommon0 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxrandr2 \
+  libgbm1 \
+  libasound2
+```
+
+## CloudPanel Setup (Optional)
+
+If using CloudPanel for simplified management:
+
+### CloudPanel Access
+- **URL**: `https://your-vps-ip:8443`
+- **Default credentials**: Set during VPS setup
+
+### Benefits of CloudPanel
+- Automatic Nginx configuration
+- One-click SSL certificates via Let's Encrypt
+- Site isolation with dedicated users
+- Web-based file manager
+- Database management UI
+
+<Note>
+CloudPanel is already installed on some VPS providers like Hostinger KVM1. Check with your provider.
+</Note>
+
+## Verification Checklist
+
+Before proceeding to database setup, verify:
+
+- [ ] Server is accessible via SSH
+- [ ] System packages are updated
+- [ ] Node.js 20.x is installed
+- [ ] Bun runtime is installed
+- [ ] PM2 is installed globally
+- [ ] Nginx is running
+- [ ] DNS records are configured
+- [ ] Firewall is configured
+- [ ] Puppeteer dependencies are installed
+
+## Next Steps
+
+<Card title="Database Setup" icon="database" href="/deployment/database">
+  Install and configure MongoDB and Redis
+</Card>

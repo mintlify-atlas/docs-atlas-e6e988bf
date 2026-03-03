@@ -1,0 +1,485 @@
+---
+title: Profile Management
+description: Learn how to manage your ArcHive profile, upload profile pictures, and view detailed usage statistics
+---
+
+ArcHive provides comprehensive profile management features, allowing you to customize your account and track your archiving activity.
+
+## Profile Information
+
+Your ArcHive profile includes:
+
+- **Name**: First name and last name
+- **Email**: Your account email (set during registration)
+- **Profile Picture**: Custom profile image stored on Cloudinary
+- **Account Dates**: Created and updated timestamps
+
+## Viewing Your Profile
+
+Access your profile from the Profile tab in the mobile app:
+
+```typescript
+<View style={styles.profileHeader}>
+  <TouchableOpacity
+    onPress={pickImage}
+    disabled={isUploadingImage}
+    style={styles.profilePictureContainer}
+  >
+    <Image
+      source={{
+        uri:
+          user?.profilePictureUrl ||
+          "https://i.pinimg.com/736x/4c/60/42/4c6042228823e4a4657dc30425955222.jpg",
+      }}
+      style={styles.profilePicture}
+    />
+  </TouchableOpacity>
+  <Text style={[styles.name, { color: colors.text }]}>
+    {user?.firstName} {user?.lastName}
+  </Text>
+  <Text style={[styles.email, { color: colors.tint }]}>
+    {user?.email}
+  </Text>
+</View>
+```
+
+**Source:** `archive/app/(tabs)/profile.tsx:119-154`
+
+## Updating Profile Information
+
+### Edit Profile Modal
+
+Update your name through the edit profile modal:
+
+<Steps>
+  <Step title="Open Edit Modal">
+    Tap the "Edit Profile" button to open the modal:
+    
+    ```typescript
+    <Button
+      title="Edit Profile"
+      onPress={() => setIsEditModalVisible(true)}
+      style={styles.editButton}
+    />
+    ```
+    
+    **Source:** `archive/app/(tabs)/profile.tsx:260-264`
+  </Step>
+  
+  <Step title="Update Fields">
+    Modify your first name and last name in the input fields
+  </Step>
+  
+  <Step title="Save Changes">
+    Tap "Save Changes" to update your profile:
+    
+    ```typescript
+    const updateProfileMutation = useMutation({
+      mutationFn: updateProfile,
+      onSuccess: (data) => {
+        updateUser(data.user);
+        setIsEditModalVisible(false);
+        Toast.show({
+          type: "success",
+          text1: "Profile updated successfully!",
+        });
+      },
+    });
+    ```
+    
+    **Source:** `archive/app/(tabs)/profile.tsx:39-56`
+  </Step>
+</Steps>
+
+### Update Profile API
+
+Profile updates are sent to the backend:
+
+```typescript
+export async function updateUserProfile(
+  userId: string,
+  userData: UpdateUserInput,
+) {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new NotFoundError("User not found.");
+  }
+
+  if (userData.firstName) {
+    user.firstName = userData.firstName;
+  }
+
+  if (userData.lastName) {
+    user.lastName = userData.lastName;
+  }
+
+  if (userData.profilePictureUrl) {
+    user.profilePictureUrl = userData.profilePictureUrl;
+  }
+
+  await user.save();
+
+  return {
+    _id: user._id!.toString(),
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    profilePictureUrl: user.profilePictureUrl,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+```
+
+**Source:** `backend/src/services/user.service.ts:7-41`
+
+## Profile Picture Management
+
+### Uploading Profile Pictures
+
+Upload custom profile pictures with automatic optimization:
+
+<Steps>
+  <Step title="Select Image">
+    Tap your profile picture to trigger image selection:
+    
+    ```typescript
+    const pickImage = async () => {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Toast.show({
+          type: "error",
+          text1: "Permission Denied",
+          text2: "We need camera roll permissions to make this work!",
+        });
+        return;
+      }
+
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        uploadProfilePictureMutation.mutate(result.assets[0].uri);
+      }
+    };
+    ```
+    
+    **Source:** `archive/app/(tabs)/profile.tsx:86-107`
+  </Step>
+  
+  <Step title="Upload to Cloudinary">
+    The image is uploaded to Cloudinary with automatic transformations:
+    
+    ```typescript
+    const uploadResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `archive/users/${userId}/profile`,
+          public_id: `profile-picture`,
+          resource_type: "image",
+          format: "jpg",
+          overwrite: true,
+          transformation: [
+            { width: 500, height: 500, crop: "fill", gravity: "face" },
+            { quality: "auto:good" },
+          ],
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        },
+      );
+    });
+    ```
+    
+    **Source:** `backend/src/services/user.service.ts:63-80`
+  </Step>
+  
+  <Step title="Update Profile">
+    The Cloudinary URL is saved to your profile:
+    
+    ```typescript
+    user.profilePictureUrl = cloudinaryUrl;
+    await user.save();
+    ```
+    
+    **Source:** `backend/src/services/user.service.ts:88-89`
+  </Step>
+</Steps>
+
+<Info>
+Profile pictures are automatically cropped to 500x500px with face detection and optimized for web delivery.
+</Info>
+
+### Upload Progress Indicator
+
+A loading overlay appears during upload:
+
+```typescript
+{isUploadingImage ? (
+  <View style={styles.uploadingOverlay}>
+    <ActivityIndicator size="large" color="#fff" />
+    <Text style={styles.uploadingText}>Uploading...</Text>
+  </View>
+) : (
+  <View style={styles.cameraIconContainer}>
+    <FontAwesome5 name="camera" size={20} color="#fff" />
+  </View>
+)}
+```
+
+**Source:** `archive/app/(tabs)/profile.tsx:133-142`
+
+## Usage Statistics
+
+View detailed statistics about your archived content:
+
+### Statistics API
+
+Fetch comprehensive statistics:
+
+```typescript
+const { data: stats, isLoading: statsLoading } = useQuery({
+  queryKey: ["userStats"],
+  queryFn: getUserStats,
+});
+```
+
+**Source:** `archive/app/(tabs)/profile.tsx:109-112`
+
+### Statistics Calculation
+
+The backend calculates various metrics:
+
+```typescript
+export async function getUserStats(userId: string) {
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
+  // Total item count
+  const totalCount = await ContentItem.countDocuments({
+    userId: userObjectId,
+  });
+
+  // Count by type (link, text, code)
+  const countsByType = await ContentItem.aggregate([
+    { $match: { userId: userObjectId } },
+    { $group: { _id: "$type", count: { $sum: 1 } } },
+  ]);
+
+  // Recent activity (last 7 days)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const recentCount = await ContentItem.countDocuments({
+    userId: userObjectId,
+    createdAt: { $gte: sevenDaysAgo },
+  });
+
+  // Top 5 tags
+  const topTags = await ContentItem.aggregate([
+    { $match: { userId: userObjectId } },
+    { $unwind: "$tags" },
+    { $group: { _id: "$tags", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: 5 },
+  ]);
+
+  // Platform breakdown
+  const platformBreakdown = await ContentItem.aggregate([
+    {
+      $match: {
+        userId: userObjectId,
+        platform: { $ne: null },
+      },
+    },
+    { $group: { _id: "$platform", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: 10 },
+  ]);
+
+  return {
+    totalItems: totalCount,
+    byType: typeStats,
+    recentActivity: recentCount,
+    topTags: topTags.map((tag) => ({ name: tag._id, count: tag.count })),
+    platformBreakdown: platformBreakdown.map((p) => ({
+      platform: p._id,
+      count: p.count,
+    })),
+    firstItemDate: oldestContent?.createdAt || null,
+    lastItemDate: newestContent?.createdAt || null,
+  };
+}
+```
+
+**Source:** `backend/src/services/stats.service.ts:5-85`
+
+### Statistics Display
+
+The profile screen displays comprehensive statistics:
+
+<CardGroup cols={2}>
+  <Card title="Total Items" icon="archive">
+    Total number of items in your archive
+  </Card>
+  <Card title="Content Breakdown" icon="chart-pie">
+    Links, text notes, and code snippets counts
+  </Card>
+  <Card title="Recent Activity" icon="clock">
+    Items added in the last 7 days
+  </Card>
+  <Card title="Top Tags" icon="tags">
+    Your 5 most-used tags with counts
+  </Card>
+</CardGroup>
+
+### Total Items Display
+
+```typescript
+<View style={[styles.statCard, { backgroundColor: colors.card }]}>
+  <View style={styles.statHeader}>
+    <FontAwesome5 name="archive" size={24} color={colors.tint} />
+    <Text style={[styles.statValue, { color: colors.text }]}>
+      {stats.totalItems}
+    </Text>
+  </View>
+  <Text style={[styles.statLabel, { color: colors.secondary }]}>
+    Total Items
+  </Text>
+</View>
+```
+
+**Source:** `archive/app/(tabs)/profile.tsx:166-176`
+
+### Content Breakdown
+
+```typescript
+<View style={[styles.statCard, { backgroundColor: colors.card }]}>
+  <Text style={[styles.statCardTitle, { color: colors.text }]}>
+    Content Breakdown
+  </Text>
+  <View style={styles.typeBreakdown}>
+    <View style={styles.typeRow}>
+      <FontAwesome5 name="link" size={20} color="#3b82f6" />
+      <Text style={[styles.typeLabel, { color: colors.text }]}>Links</Text>
+      <Text style={[styles.typeValue, { color: colors.tint }]}>
+        {stats.byType.link}
+      </Text>
+    </View>
+    <View style={styles.typeRow}>
+      <FontAwesome5 name="file-alt" size={20} color="#10b981" />
+      <Text style={[styles.typeLabel, { color: colors.text }]}>Text Notes</Text>
+      <Text style={[styles.typeValue, { color: colors.tint }]}>
+        {stats.byType.text}
+      </Text>
+    </View>
+    <View style={styles.typeRow}>
+      <FontAwesome5 name="code" size={20} color="#f59e0b" />
+      <Text style={[styles.typeLabel, { color: colors.text }]}>Code Snippets</Text>
+      <Text style={[styles.typeValue, { color: colors.tint }]}>
+        {stats.byType.code}
+      </Text>
+    </View>
+  </View>
+</View>
+```
+
+**Source:** `archive/app/(tabs)/profile.tsx:178-211`
+
+### Top Tags Display
+
+```typescript
+{stats.topTags && stats.topTags.length > 0 && (
+  <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+    <Text style={[styles.statCardTitle, { color: colors.text }]}>
+      Top Tags
+    </Text>
+    <View style={styles.tagsContainer}>
+      {stats.topTags.map((tagItem, index) => (
+        <View
+          key={index}
+          style={[styles.tagChip, { backgroundColor: colors.background }]}
+        >
+          <Text style={[styles.tagText, { color: colors.text }]}>
+            #{tagItem.name}
+          </Text>
+          <View style={[styles.tagCount, { backgroundColor: colors.tint }]}>
+            <Text style={styles.tagCountText}>{tagItem.count}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  </View>
+)}
+```
+
+**Source:** `archive/app/(tabs)/profile.tsx:227-256`
+
+## Account Management
+
+### Logout Functionality
+
+Securely log out of your account:
+
+<Steps>
+  <Step title="Tap Logout Button">
+    Tap the logout button at the bottom of the profile screen
+  </Step>
+  
+  <Step title="Confirm Logout">
+    A confirmation modal appears:
+    
+    ```typescript
+    <View style={[styles.logoutModalContent, { backgroundColor: colors.card }]}>
+      <View style={styles.logoutIconContainer}>
+        <FontAwesome5 name="sign-out-alt" size={32} color={colors.danger} />
+      </View>
+      <Text style={[styles.logoutTitle, { color: colors.text }]}>Logout</Text>
+      <Text style={[styles.logoutMessage, { color: colors.secondary }]}>
+        Are you sure you want to log out of your account?
+      </Text>
+    </View>
+    ```
+    
+    **Source:** `archive/app/(tabs)/profile.tsx:350-362`
+  </Step>
+  
+  <Step title="Execute Logout">
+    Confirming clears your session and returns to login:
+    
+    ```typescript
+    const handleLogout = async () => {
+      await logout();
+      router.replace("/login");
+      setIsLogoutModalVisible(false);
+    };
+    ```
+    
+    **Source:** `archive/app/(tabs)/profile.tsx:33-37`
+  </Step>
+</Steps>
+
+<Warning>
+Logging out clears your local authentication tokens. You'll need to log in again to access your archive.
+</Warning>
+
+## Statistics Refresh
+
+<Tip>
+Statistics are automatically fetched when you open the profile screen and can be refreshed by pulling down on the screen.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Content Capture" icon="save" href="/features/content-capture">
+    Learn how to capture content
+  </Card>
+  <Card title="Search" icon="search" href="/features/search">
+    Master the search functionality
+  </Card>
+</CardGroup>

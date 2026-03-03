@@ -1,0 +1,334 @@
+---
+title: "Authentication"
+description: "JWT-based authentication flow with token refresh and secure session management"
+---
+
+## Overview
+
+ArcHive uses JWT (JSON Web Token) based authentication. The authentication flow involves:
+
+1. Register or login to receive access and refresh tokens
+2. Include the access token in the `Authorization` header for protected endpoints
+3. Refresh the access token when it expires using the refresh token
+4. Logout to invalidate both tokens
+
+## Authentication Flow
+
+### Access Tokens
+
+Access tokens are short-lived JWT tokens used to authenticate API requests. Include them in the `Authorization` header:
+
+```bash
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+### Refresh Tokens
+
+Refresh tokens are long-lived tokens used to obtain new access tokens without requiring the user to log in again.
+
+## Register User
+
+Create a new user account and receive authentication tokens.
+
+```bash POST /api/auth/register
+curl -X POST https://api.archive.com/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePass123!",
+    "firstName": "John",
+    "lastName": "Doe"
+  }'
+```
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  Valid email address (converted to lowercase)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Password meeting security requirements:
+  - Minimum 8 characters
+  - Maximum 64 characters
+  - At least one uppercase letter
+  - At least one lowercase letter
+  - At least one number
+  - At least one special character
+</ParamField>
+
+<ParamField body="firstName" type="string" required>
+  User's first name (1-50 characters)
+</ParamField>
+
+<ParamField body="lastName" type="string" required>
+  User's last name (1-50 characters)
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Registration successful!"
+</ResponseField>
+
+<ResponseField name="user" type="object">
+  User information object
+  
+  <Expandable title="properties">
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    
+    <ResponseField name="firstName" type="string">
+      User's first name
+    </ResponseField>
+    
+    <ResponseField name="lastName" type="string">
+      User's last name
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="accessToken" type="string">
+  JWT access token for API authentication
+</ResponseField>
+
+<ResponseField name="refreshToken" type="string">
+  JWT refresh token for obtaining new access tokens
+</ResponseField>
+
+<ResponseExample>
+```json
+{
+  "message": "Registration successful!",
+  "user": {
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe"
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+</ResponseExample>
+
+## Login
+
+Authenticate with existing credentials to receive tokens.
+
+```bash POST /api/auth/login
+curl -X POST https://api.archive.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePass123!"
+  }'
+```
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  Valid email address (converted to lowercase)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Login successful!"
+</ResponseField>
+
+<ResponseField name="user" type="object">
+  User information object
+</ResponseField>
+
+<ResponseField name="accessToken" type="string">
+  JWT access token for API authentication
+</ResponseField>
+
+<ResponseField name="refreshToken" type="string">
+  JWT refresh token for obtaining new access tokens
+</ResponseField>
+
+<ResponseExample>
+```json
+{
+  "message": "Login successful!",
+  "user": {
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe"
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+</ResponseExample>
+
+## Refresh Access Token
+
+Obtain a new access token using a valid refresh token.
+
+```bash POST /api/auth/refresh
+curl -X POST https://api.archive.com/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
+### Request Body
+
+<ParamField body="refreshToken" type="string" required>
+  Valid refresh token obtained from login or registration
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Token refreshed successfully!"
+</ResponseField>
+
+<ResponseField name="accessToken" type="string">
+  New JWT access token for API authentication
+</ResponseField>
+
+<ResponseField name="refreshToken" type="string">
+  New JWT refresh token (token rotation for security)
+</ResponseField>
+
+<ResponseExample>
+```json
+{
+  "message": "Token refreshed successfully!",
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+</ResponseExample>
+
+## Logout
+
+Invalidate both access and refresh tokens to end the session.
+
+```bash POST /api/auth/logout
+curl -X POST https://api.archive.com/api/auth/logout \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token with the access token: `Bearer YOUR_ACCESS_TOKEN`
+</ParamField>
+
+### Request Body
+
+<ParamField body="refreshToken" type="string" required>
+  Refresh token to invalidate
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Logout successful."
+</ResponseField>
+
+<ResponseExample>
+```json
+{
+  "message": "Logout successful."
+}
+```
+</ResponseExample>
+
+## Security Features
+
+### Token Blacklisting
+
+When a user logs out, both the access and refresh tokens are blacklisted to prevent reuse.
+
+### Password Requirements
+
+Passwords must meet the following security criteria:
+
+- Minimum 8 characters, maximum 64 characters
+- At least one uppercase letter (A-Z)
+- At least one lowercase letter (a-z)
+- At least one number (0-9)
+- At least one special character
+
+### Rate Limiting
+
+Authentication endpoints are protected with rate limiting:
+
+- **Registration & Login**: Standard rate limiting
+- **Token Refresh**: Strict rate limiting to prevent abuse
+
+### JWT Algorithm
+
+Tokens are signed using the **HS256** (HMAC with SHA-256) algorithm.
+
+## Error Responses
+
+Common authentication errors:
+
+### Invalid Credentials
+
+```json
+{
+  "success": false,
+  "message": "Invalid email or password",
+  "statusCode": 401
+}
+```
+
+### Token Expired
+
+```json
+{
+  "success": false,
+  "message": "Access token expired",
+  "statusCode": 401
+}
+```
+
+### Validation Error
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "statusCode": 400,
+  "details": {
+    "password": ["Password must contain at least one uppercase letter"]
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Store tokens securely">
+    Never store tokens in localStorage or sessionStorage in web applications. Use secure, httpOnly cookies or memory storage with proper security measures.
+  </Accordion>
+
+  <Accordion title="Refresh tokens proactively">
+    Refresh access tokens before they expire to maintain a seamless user experience. Implement token refresh logic in your API client.
+  </Accordion>
+
+  <Accordion title="Handle token rotation">
+    The API implements token rotation - each refresh request returns a new refresh token. Always update your stored refresh token after a successful refresh.
+  </Accordion>
+
+  <Accordion title="Logout on security events">
+    Call the logout endpoint when detecting suspicious activity, password changes, or security-related events.
+  </Accordion>
+</AccordionGroup>

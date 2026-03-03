@@ -1,0 +1,311 @@
+---
+title: Mobile App
+description: Install and use the ArcHive mobile app on iOS and Android to capture and manage your digital knowledge on the go
+---
+
+The ArcHive mobile app is your personal digital sanctuary for thoughts, links, and code - available on both iOS and Android. Built with Expo and React Native, it provides a seamless experience for capturing and organizing your knowledge base from anywhere.
+
+## Features
+
+### Multi-Content Support
+Effortlessly save and manage different types of content in one unified system:
+- **Text Notes**: Capture fleeting thoughts and important information
+- **Web Links**: Save articles, tutorials, and web resources with automatic metadata extraction
+- **Code Snippets**: Store and organize code snippets for quick reference
+
+### Seamless Content Capture
+
+**Share From Anywhere**
+
+Share links and text directly from other apps into ArcHive for quick saving. The app integrates with your device's native share functionality.
+
+**Deep Linking**
+
+Open content directly in the app via shared links using the `archive://` URL scheme.
+
+**In-App Capture**
+
+A dynamic Floating Action Button (FAB) allows for quick and delightful creation of new content without interrupting your workflow.
+
+### Intelligent Content Processing
+
+**Automatic Parsing**
+
+ArcHive automatically parses web links to extract titles, descriptions, and other metadata. It includes specialized parsers for popular platforms:
+- GitHub repositories and gists
+- Instagram posts
+- YouTube videos
+- Twitter/X posts
+
+**Screenshot Generation**
+
+For every link you save, ArcHive generates a screenshot for quick visual reference using Puppeteer, stored on Cloudinary.
+
+**Automated Tagging**
+
+An intelligent tag engine analyzes your content to suggest relevant tags, making organization effortless.
+
+### Powerful Organization & Retrieval
+
+**Full-Text Search**
+
+Find exactly what you need with powerful search that scans the entire content of your saved items, not just titles. Matching keywords are highlighted for context.
+
+**Content Type Filtering**
+
+Quickly filter your content by type (All, Link, Text, Code) for focused browsing.
+
+**Platform Categorization**
+
+Automatically categorizes links by their source platform with visual badges and icons:
+- GitHub
+- YouTube
+- Twitter/X
+- Instagram
+- And more
+
+**Browse by Platform**
+
+Dedicated browse tab to view and filter content by platform, making it easy to find all your saved GitHub repos, YouTube videos, or tweets in one place.
+
+**Platform Statistics**
+
+See at a glance how many items you have saved from each platform.
+
+**Infinite Scroll**
+
+Seamlessly load more content as you scroll with optimized pagination using TanStack Query.
+
+**Recent Search History**
+
+Quick access to your recent searches for faster navigation.
+
+**Rich Metadata**
+
+Organize your content with custom titles, descriptions, and flexible tagging.
+
+**Content Management**
+
+Easily view, edit, and delete your archived content with intuitive gestures and interfaces.
+
+### Profile Management
+
+**User Profiles**
+
+Manage your account from a dedicated profile screen with real-time statistics.
+
+**Profile Pictures**
+
+Upload and update your profile picture with Cloudinary-powered image storage.
+
+**Usage Statistics**
+
+Track your content creation with detailed stats showing:
+- Total items saved
+- Breakdown by content type (links, text, code)
+- Platform-specific counts
+
+**Account Customization**
+
+Update your first name and last name to personalize your experience.
+
+## Installation
+
+<Steps>
+  <Step title="Download from App Store">
+    The ArcHive mobile app is available for download on both platforms:
+    
+    <CodeGroup>
+    ```bash iOS
+    # Search for "ArcHive" on the App Store
+    # Or visit: [Coming Soon]
+    ```
+    
+    ```bash Android
+    # Search for "ArcHive" on Google Play Store
+    # Or visit: [Coming Soon]
+    ```
+    </CodeGroup>
+    
+    <Note>
+    The app is currently in development. Public releases will be available soon.
+    </Note>
+  </Step>
+  
+  <Step title="Create an Account">
+    Open the app and tap "Register" to create your account:
+    - Enter your email address
+    - Choose a secure password
+    - Add your first and last name
+    - Tap "Create Account"
+  </Step>
+  
+  <Step title="Start Capturing Content">
+    Once logged in, you can immediately start saving content:
+    - Tap the FAB (Floating Action Button) to create new items
+    - Share content from other apps directly to ArcHive
+    - Use deep links to open specific content
+  </Step>
+</Steps>
+
+## Usage
+
+### Creating Content
+
+**Using the FAB**
+
+1. Tap the Floating Action Button in the bottom right corner
+2. Select your content type:
+   - **Link**: Save a web URL with automatic metadata extraction
+   - **Text**: Create a text note or save copied text
+   - **Code**: Store a code snippet with syntax highlighting
+3. Fill in the details (title, content, tags)
+4. Tap "Save" to add it to your archive
+
+**Sharing from Other Apps**
+
+1. From any app (browser, Twitter, YouTube, etc.), tap the Share button
+2. Select "ArcHive" from the share sheet
+3. The app will open with pre-filled content
+4. Review and save to your archive
+
+### Browsing Content
+
+**Home Tab**
+
+View all your saved content in chronological order with infinite scroll. Use the search bar to find specific items or filter by content type.
+
+**Browse Tab**
+
+View content organized by platform:
+- See platform statistics at a glance
+- Tap any platform to view all saved items from that source
+- Quickly identify patterns in your saved content
+
+**Search**
+
+Tap the search bar on the home screen:
+- Type keywords to search across all content
+- Matching text is highlighted in results
+- Access recent searches for quick filtering
+- Filter by content type while searching
+
+### Managing Content
+
+**View Details**
+
+Tap any item to view full details:
+- Complete content with metadata
+- Screenshots for links
+- All associated tags
+- Creation and modification dates
+
+**Edit Content**
+
+From the detail view:
+1. Tap the Edit button
+2. Modify title, description, tags, or content
+3. Save your changes
+
+**Delete Content**
+
+From the detail view:
+1. Tap the Delete button
+2. Confirm the deletion
+
+<Warning>
+Deleted content cannot be recovered. Make sure you want to permanently remove the item.
+</Warning>
+
+### Profile & Settings
+
+**Update Profile**
+
+1. Navigate to the Profile tab
+2. Tap your profile picture to upload a new one
+3. Edit your first name or last name
+4. Changes are saved automatically
+
+**View Statistics**
+
+Your profile displays:
+- Total items saved
+- Links count
+- Text notes count
+- Code snippets count
+- Account information
+
+**Logout**
+
+Tap the Logout button in the profile tab to sign out of your account.
+
+## Technical Details
+
+### Supported Platforms
+
+- **iOS**: iOS 13.0 and later
+- **Android**: Android 5.0 (API level 21) and later
+
+### Bundle Identifiers
+
+- **iOS**: `com.atharvdange618.archive`
+- **Android**: `com.atharvdange618.archive`
+
+### URL Scheme
+
+The app supports the `archive://` URL scheme for deep linking.
+
+### Key Technologies
+
+- **Framework**: Expo SDK 54
+- **Navigation**: Expo Router with typed routes
+- **State Management**: Zustand
+- **Data Fetching**: TanStack Query (React Query)
+- **Forms**: React Hook Form with Zod validation
+- **Image Handling**: Expo Image Picker + Cloudinary
+- **Secure Storage**: Expo Secure Store for authentication tokens
+- **UI Components**: React Native with Reanimated animations
+
+## Troubleshooting
+
+### Login Issues
+
+If you're having trouble logging in:
+- Verify your email and password are correct
+- Check your internet connection
+- Try resetting your password
+- Ensure the app is up to date
+
+### Content Not Syncing
+
+If your content isn't appearing:
+- Check your internet connection
+- Pull down to refresh the content list
+- Try logging out and back in
+- Restart the app
+
+### Share Extension Not Working
+
+If sharing from other apps isn't working:
+- Make sure you've granted the app necessary permissions
+- Restart the source app and try again
+- Reinstall ArcHive if the problem persists
+
+### App Crashes
+
+If the app crashes frequently:
+- Update to the latest version
+- Clear the app cache
+- Restart your device
+- Report the issue with details about when it occurs
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Chrome Extension" icon="chrome" href="/platforms/chrome-extension">
+    Save content from your browser
+  </Card>
+  <Card title="Web Dashboard" icon="globe" href="/platforms/web-dashboard">
+    Manage your archive from desktop
+  </Card>
+</CardGroup>

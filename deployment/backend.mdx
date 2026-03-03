@@ -1,0 +1,469 @@
+---
+title: Backend Deployment
+description: Deploy the ArcHive backend with PM2 and Bun runtime
+---
+
+Deploy the ArcHive backend API and background workers using PM2 process manager and Bun runtime.
+
+## Clone Repository
+
+### Setup SSH Key for GitHub
+
+<Steps>
+  <Step title="Generate SSH Key">
+    ```bash
+    ssh-keygen -t ed25519 -C "your-email@example.com" -f ~/.ssh/github_deploy
+    ```
+  </Step>
+  <Step title="Copy Public Key">
+    ```bash
+    cat ~/.ssh/github_deploy.pub
+    ```
+  </Step>
+  <Step title="Add to GitHub">
+    Go to GitHub → Settings → SSH and GPG keys → New SSH key and paste the public key
+  </Step>
+</Steps>
+
+### Clone the Repository
+
+<CodeGroup>
+```bash Standard Deployment
+# Clone to /var/www/archive
+sudo mkdir -p /var/www/archive
+cd /var/www/archive
+git clone git@github.com:your-username/ArcHive.git .
+```
+
+```bash CloudPanel Deployment
+# Switch to site user
+su - archive-api
+
+# Navigate to htdocs
+cd /home/archive-api/htdocs
+
+# Remove default files
+rm -rf *
+
+# Clone repository
+git clone git@github.com:your-username/ArcHive.git .
+
+# Navigate to backend
+cd backend
+```
+</CodeGroup>
+
+## Install Dependencies
+
+Install backend dependencies using Bun:
+
+```bash
+cd backend
+bun install
+```
+
+<Note>
+Bun is significantly faster than npm/yarn for installing dependencies.
+</Note>
+
+## Configure Environment
+
+Copy the example environment file and configure it:
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+See [Configuration](/deployment/configuration) for detailed environment variable settings.
+
+## PM2 Process Manager Setup
+
+PM2 manages the backend API and background workers with automatic restarts and monitoring.
+
+### Create PM2 Ecosystem File
+
+Create `ecosystem.config.js` in the backend directory:
+
+<CodeGroup>
+```javascript Standard Deployment
+module.exports = {
+  apps: [
+    {
+      name: "archive-api",
+      script: "/root/.bun/bin/bun",
+      args: "run src/index.ts",
+      cwd: "/var/www/archive/backend",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "500M",
+      env: {
+        NODE_ENV: "production",
+      },
+      error_file: "/var/www/archive/logs/api-error.log",
+      out_file: "/var/www/archive/logs/api-out.log",
+      time: true,
+    },
+    {
+      name: "archive-screenshot-worker",
+      script: "/root/.bun/bin/bun",
+      args: "run src/workers/screenshot.worker.ts",
+      cwd: "/var/www/archive/backend",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "500M",
+      env: {
+        NODE_ENV: "production",
+      },
+      error_file: "/var/www/archive/logs/screenshot-worker-error.log",
+      out_file: "/var/www/archive/logs/screenshot-worker-out.log",
+      time: true,
+    },
+    {
+      name: "archive-tag-worker",
+      script: "/root/.bun/bin/bun",
+      args: "run src/workers/tag.worker.ts",
+      cwd: "/var/www/archive/backend",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "300M",
+      env: {
+        NODE_ENV: "production",
+      },
+      error_file: "/var/www/archive/logs/tag-worker-error.log",
+      out_file: "/var/www/archive/logs/tag-worker-out.log",
+      time: true,
+    },
+  ],
+};
+```
+
+```javascript CloudPanel Deployment
+module.exports = {
+  apps: [
+    {
+      name: "archive-api",
+      script: "/home/archive-api/.bun/bin/bun",
+      args: "run src/index.ts",
+      cwd: "/home/archive-api/htdocs/backend",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "500M",
+      env: {
+        NODE_ENV: "production",
+      },
+      error_file: "/home/archive-api/htdocs/logs/api-error.log",
+      out_file: "/home/archive-api/htdocs/logs/api-out.log",
+      time: true,
+    },
+    {
+      name: "archive-screenshot-worker",
+      script: "/home/archive-api/.bun/bin/bun",
+      args: "run src/workers/screenshot.worker.ts",
+      cwd: "/home/archive-api/htdocs/backend",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "500M",
+      env: {
+        NODE_ENV: "production",
+      },
+      error_file: "/home/archive-api/htdocs/logs/screenshot-worker-error.log",
+      out_file: "/home/archive-api/htdocs/logs/screenshot-worker-out.log",
+      time: true,
+    },
+    {
+      name: "archive-tag-worker",
+      script: "/home/archive-api/.bun/bin/bun",
+      args: "run src/workers/tag.worker.ts",
+      cwd: "/home/archive-api/htdocs/backend",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "300M",
+      env: {
+        NODE_ENV: "production",
+      },
+      error_file: "/home/archive-api/htdocs/logs/tag-worker-error.log",
+      out_file: "/home/archive-api/htdocs/logs/tag-worker-out.log",
+      time: true,
+    },
+  ],
+};
+```
+</CodeGroup>
+
+### Create Logs Directory
+
+<CodeGroup>
+```bash Standard Deployment
+mkdir -p /var/www/archive/logs
+```
+
+```bash CloudPanel Deployment
+mkdir -p /home/archive-api/htdocs/logs
+```
+</CodeGroup>
+
+### Start Applications with PM2
+
+<Steps>
+  <Step title="Start All Processes">
+    ```bash
+    pm2 start ecosystem.config.js
+    ```
+  </Step>
+  <Step title="Save PM2 Process List">
+    ```bash
+    pm2 save
+    ```
+  </Step>
+  <Step title="Setup Auto-Start on Boot">
+    <CodeGroup>
+    ```bash Standard Deployment
+    pm2 startup systemd
+    # Copy and run the command that PM2 outputs
+    ```
+    
+    ```bash CloudPanel Deployment
+    # As root
+    pm2 startup systemd -u archive-api --hp /home/archive-api
+    # Copy and run the command that PM2 outputs
+    ```
+    </CodeGroup>
+  </Step>
+  <Step title="Verify Processes">
+    ```bash
+    pm2 list
+    pm2 status
+    ```
+  </Step>
+</Steps>
+
+## PM2 Management Commands
+
+### View Processes
+
+```bash
+# List all processes
+pm2 list
+
+# Monitor processes in real-time
+pm2 monit
+
+# View process details
+pm2 show archive-api
+```
+
+### Manage Processes
+
+```bash
+# Restart all processes
+pm2 restart all
+
+# Restart specific process
+pm2 restart archive-api
+
+# Stop all processes
+pm2 stop all
+
+# Stop specific process
+pm2 stop archive-screenshot-worker
+
+# Delete all processes
+pm2 delete all
+
+# Reload ecosystem config
+pm2 reload ecosystem.config.js
+```
+
+### View Logs
+
+```bash
+# View all logs
+pm2 logs
+
+# View logs for specific app
+pm2 logs archive-api
+
+# View last 100 lines
+pm2 logs --lines 100
+
+# Clear logs
+pm2 flush
+```
+
+## Nginx Configuration
+
+### Create Node.js Site (CloudPanel)
+
+<Steps>
+  <Step title="Access CloudPanel">
+    Open `https://your-vps-ip:8443` and login
+  </Step>
+  <Step title="Add Site">
+    Click **Sites** → **+ ADD SITE**
+  </Step>
+  <Step title="Configure Site">
+    - **Domain Name**: `api.archive.example.com`
+    - **Site User**: `archive-api`
+    - **App**: Select **Node.js**
+    - **Node.js Version**: Latest (20.x)
+    - **App Port**: `3000`
+    - **Site Root**: `/home/archive-api/htdocs` (auto-filled)
+  </Step>
+  <Step title="Create Site">
+    Click **Create** - CloudPanel will configure Nginx automatically
+  </Step>
+</Steps>
+
+### Manual Nginx Configuration
+
+If not using CloudPanel, create Nginx configuration manually:
+
+```nginx /etc/nginx/sites-available/archive-api
+server {
+    listen 80;
+    server_name api.archive.example.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Enable the site:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/archive-api /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+## SSL Certificate Setup
+
+### Via CloudPanel (Recommended)
+
+<Steps>
+  <Step title="Go to SSL/TLS Tab">
+    CloudPanel → Sites → Manage site → SSL/TLS
+  </Step>
+  <Step title="Create Certificate">
+    Actions → New Let's Encrypt Certificate → Create and Install
+  </Step>
+  <Step title="Enable Force HTTPS">
+    Toggle **Force HTTPS** to redirect all HTTP traffic
+  </Step>
+</Steps>
+
+### Manual SSL with Certbot
+
+```bash
+# Install Certbot
+sudo apt install -y certbot python3-certbot-nginx
+
+# Obtain certificate
+sudo certbot --nginx -d api.archive.example.com
+
+# Auto-renewal is configured automatically
+```
+
+## Verify Deployment
+
+### Check API Health
+
+```bash
+# Test local endpoint
+curl http://localhost:3000/api/health
+
+# Test via domain
+curl https://api.archive.example.com/api/health
+```
+
+Expected response:
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-03-15T10:30:00.000Z",
+  "uptime": 3600
+}
+```
+
+### Check PM2 Status
+
+```bash
+pm2 list
+```
+
+All processes should show status: **online**
+
+## Troubleshooting
+
+### API Not Responding
+
+```bash
+# Check if process is running
+pm2 list
+
+# Check logs
+pm2 logs archive-api --lines 50
+
+# Check if port 3000 is listening
+sudo netstat -tulpn | grep :3000
+
+# Restart API
+pm2 restart archive-api
+```
+
+### Workers Not Processing Jobs
+
+```bash
+# Check worker logs
+pm2 logs archive-screenshot-worker
+pm2 logs archive-tag-worker
+
+# Check Redis connection
+redis-cli PING
+
+# Restart workers
+pm2 restart archive-screenshot-worker
+pm2 restart archive-tag-worker
+```
+
+### High Memory Usage
+
+```bash
+# Monitor memory
+pm2 monit
+
+# Reduce max_memory_restart in ecosystem.config.js
+# Restart with new config
+pm2 reload ecosystem.config.js
+```
+
+<Warning>
+On 4GB VPS, monitor memory usage closely. Screenshot workers can use significant memory. Consider reducing `max_memory_restart` values if experiencing issues.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Monitoring" icon="chart-line" href="/deployment/monitoring">
+    Set up monitoring, logs, and backups
+  </Card>
+  <Card title="Configuration" icon="gear" href="/deployment/configuration">
+    Configure environment variables
+  </Card>
+</CardGroup>

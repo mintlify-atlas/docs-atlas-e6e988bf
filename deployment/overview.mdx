@@ -1,0 +1,159 @@
+---
+title: Self-Hosting Overview
+description: Architecture overview and components needed for self-hosting ArcHive
+---
+
+ArcHive can be self-hosted on your own VPS (Virtual Private Server) with complete control over your data and deployment. This guide covers deploying on Ubuntu 22.04 LTS with automated CI/CD.
+
+## Architecture Components
+
+A complete ArcHive deployment consists of the following components:
+
+### Backend Application
+- **Node.js Backend**: Hono-based REST API running on Bun runtime
+- **Background Workers**: 
+  - Screenshot Worker: Captures webpage screenshots using Puppeteer
+  - Tag Worker: Processes automatic tagging for content items
+- **Process Manager**: PM2 for process management and monitoring
+
+### Databases
+- **MongoDB**: Primary database for storing users, collections, and content items
+- **Redis**: In-memory cache and job queue for BullMQ workers
+
+### Web Server
+- **Nginx**: Reverse proxy handling SSL termination and request routing
+- **SSL/TLS**: Let's Encrypt certificates for HTTPS
+
+### Optional: CloudPanel
+CloudPanel is a web-based control panel that simplifies:
+- Nginx configuration management
+- SSL certificate automation
+- User and site isolation
+- Database management UI
+- File management
+
+## Server Specifications
+
+### Minimum Requirements
+- **CPU**: 1 vCPU Core
+- **RAM**: 4 GB
+- **Storage**: 50 GB SSD/NVMe
+- **Bandwidth**: 2-4 TB
+- **OS**: Ubuntu 22.04 LTS (recommended)
+
+### Recommended for Production
+- **CPU**: 2+ vCPU Cores
+- **RAM**: 8 GB
+- **Storage**: 100 GB SSD/NVMe
+- **Bandwidth**: 4+ TB
+
+## Deployment Models
+
+### Standard VPS Deployment
+Deploy all components on a single VPS:
+- Backend API (port 3000)
+- MongoDB (port 27017)
+- Redis (port 6379)
+- Nginx as reverse proxy
+- PM2 managing Node.js processes
+
+### CloudPanel Deployment
+Use CloudPanel for simplified management:
+- Automatic Nginx configuration
+- One-click SSL certificates
+- Site isolation with dedicated users
+- Web-based file and database management
+
+## Network Architecture
+
+```
+Client → Nginx (443) → Backend API (3000)
+                      ↓
+                   MongoDB (27017)
+                   Redis (6379)
+                      ↓
+                  Background Workers
+                   - Screenshot Worker
+                   - Tag Worker
+```
+
+## Directory Structure
+
+Typical deployment structure:
+
+```
+/home/archive-api/
+├── htdocs/
+│   ├── backend/
+│   │   ├── src/
+│   │   ├── ecosystem.config.js
+│   │   ├── .env
+│   │   └── package.json
+│   └── logs/
+│       ├── api-error.log
+│       ├── api-out.log
+│       ├── screenshot-worker-error.log
+│       └── tag-worker-error.log
+└── backups/
+    └── mongodb/
+```
+
+## Security Considerations
+
+<Warning>
+Before deploying to production, ensure you:
+- Use strong passwords for all services (MongoDB, Redis, JWT secrets)
+- Enable MongoDB and Redis authentication
+- Configure firewall rules (UFW)
+- Set up SSL/TLS certificates
+- Use environment variables for sensitive data
+- Enable rate limiting on API endpoints
+- Configure CORS properly
+</Warning>
+
+## Deployment Workflow
+
+The typical deployment process follows these steps:
+
+<Steps>
+  <Step title="Prepare Server">
+    Set up VPS with Ubuntu 22.04, configure DNS records
+  </Step>
+  <Step title="Install Prerequisites">
+    Install Node.js, Bun, MongoDB, Redis, Nginx, and PM2
+  </Step>
+  <Step title="Configure Databases">
+    Set up MongoDB and Redis with authentication
+  </Step>
+  <Step title="Deploy Backend">
+    Clone repository, install dependencies, configure environment
+  </Step>
+  <Step title="Configure Web Server">
+    Set up Nginx reverse proxy and SSL certificates
+  </Step>
+  <Step title="Start Services">
+    Launch application and workers with PM2
+  </Step>
+  <Step title="Setup CI/CD">
+    Configure GitHub Actions for automated deployments
+  </Step>
+</Steps>
+
+## Next Steps
+
+Continue with the deployment process:
+
+<CardGroup cols={2}>
+  <Card title="Prerequisites" icon="list-check" href="/deployment/prerequisites">
+    System requirements and software installation
+  </Card>
+  <Card title="Database Setup" icon="database" href="/deployment/database">
+    Configure MongoDB and Redis
+  </Card>
+  <Card title="Backend Deployment" icon="server" href="/deployment/backend">
+    Deploy the Node.js backend with PM2
+  </Card>
+  <Card title="Configuration" icon="gear" href="/deployment/configuration">
+    Environment variables and settings
+  </Card>
+</CardGroup>

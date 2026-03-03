@@ -1,0 +1,502 @@
+---
+title: Content Management
+description: API endpoints for creating, retrieving, updating, and deleting content items
+---
+
+All content endpoints require JWT authentication. Content items can be of three types: Text, Link, or Code.
+
+## Create Content
+
+<RequestExample>
+```bash Text Content
+curl -X POST https://api.archive.com/api/content \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "type": "text",
+    "content": "This is my saved text content",
+    "title": "Important Note",
+    "description": "A quick reminder for later",
+    "tags": ["personal", "notes"]
+  }'
+```
+
+```bash Link Content
+curl -X POST https://api.archive.com/api/content \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "type": "link",
+    "url": "https://example.com/article",
+    "title": "Interesting Article",
+    "description": "Great read about tech trends",
+    "tags": ["tech", "reading"]
+  }'
+```
+
+```bash Code Snippet
+curl -X POST https://api.archive.com/api/content \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "type": "code",
+    "content": "function hello() { console.log(\"Hello\"); }",
+    "title": "JavaScript Function",
+    "description": "Simple hello function",
+    "tags": ["javascript", "snippets"]
+  }'
+```
+</RequestExample>
+
+Create a new content item in the user's archive.
+
+**Authentication Required:** Yes
+
+**Rate Limit:** API rate limiter applied
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+### Request Body
+
+The request body schema varies by content type. All types support optional `title`, `description`, and `tags` fields.
+
+<Tabs>
+  <Tab title="Text Content">
+    <ParamField body="type" type="string" required>
+      Must be `"text"`
+    </ParamField>
+    
+    <ParamField body="content" type="string" required>
+      Text content (1-100,000 characters, trimmed)
+    </ParamField>
+    
+    <ParamField body="title" type="string">
+      Optional title (max 200 characters, trimmed)
+    </ParamField>
+    
+    <ParamField body="description" type="string">
+      Optional description (max 1,000 characters, trimmed)
+    </ParamField>
+    
+    <ParamField body="tags" type="array">
+      Array of tag strings (converted to lowercase, trimmed). Default: `[]`
+    </ParamField>
+  </Tab>
+  
+  <Tab title="Link Content">
+    <ParamField body="type" type="string">
+      Optional, defaults to `"link"` if not specified
+    </ParamField>
+    
+    <ParamField body="url" type="string" required>
+      Valid URL (trimmed, must be valid URL format)
+    </ParamField>
+    
+    <ParamField body="title" type="string">
+      Optional title (max 200 characters, trimmed)
+    </ParamField>
+    
+    <ParamField body="description" type="string">
+      Optional description (max 1,000 characters, trimmed)
+    </ParamField>
+    
+    <ParamField body="tags" type="array">
+      Array of tag strings (converted to lowercase, trimmed). Default: `[]`
+    </ParamField>
+  </Tab>
+  
+  <Tab title="Code Content">
+    <ParamField body="type" type="string" required>
+      Must be `"code"`
+    </ParamField>
+    
+    <ParamField body="content" type="string" required>
+      Code content (1-100,000 characters, trimmed)
+    </ParamField>
+    
+    <ParamField body="title" type="string">
+      Optional title (max 200 characters, trimmed)
+    </ParamField>
+    
+    <ParamField body="description" type="string">
+      Optional description (max 1,000 characters, trimmed)
+    </ParamField>
+    
+    <ParamField body="tags" type="array">
+      Array of tag strings (converted to lowercase, trimmed). Default: `[]`
+    </ParamField>
+  </Tab>
+</Tabs>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Content created successfully"
+</ResponseField>
+
+<ResponseField name="content" type="object">
+  Created content item object
+  
+  <Expandable title="Content properties">
+    <ResponseField name="_id" type="string">
+      Unique content identifier
+    </ResponseField>
+    <ResponseField name="userId" type="string">
+      Owner's user ID
+    </ResponseField>
+    <ResponseField name="type" type="string">
+      Content type: "text", "link", or "code"
+    </ResponseField>
+    <ResponseField name="title" type="string">
+      Content title (if provided)
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Content description (if provided)
+    </ResponseField>
+    <ResponseField name="content" type="string">
+      Text or code content (for text/code types)
+    </ResponseField>
+    <ResponseField name="url" type="string">
+      URL (for link type)
+    </ResponseField>
+    <ResponseField name="tags" type="array">
+      Array of tags
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp
+    </ResponseField>
+    <ResponseField name="updatedAt" type="string">
+      ISO 8601 timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error Responses
+
+- **400 Bad Request** - Validation errors (invalid type, missing required fields, content too long)
+- **401 Unauthorized** - Missing or invalid authentication token
+- **500 Internal Server Error** - Server error
+
+---
+
+## Get All Content
+
+<RequestExample>
+```bash Basic Request
+curl -X GET "https://api.archive.com/api/content" \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+```bash With Search Query
+curl -X GET "https://api.archive.com/api/content?q=javascript&type=code&page=1&limit=20" \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+```bash Filter by Tags
+curl -X GET "https://api.archive.com/api/content?tag=personal&limit=50" \
+  -H "Authorization: Bearer {accessToken}"
+```
+
+```bash Filter by Platform
+curl -X GET "https://api.archive.com/api/content?platform=twitter" \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Retrieve all content items for the authenticated user with support for search, filtering, and pagination.
+
+**Authentication Required:** Yes
+
+**Rate Limit:** Search rate limiter applied
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="q" type="string">
+  Search query (minimum 1 character, trimmed)
+</ParamField>
+
+<ParamField query="type" type="string">
+  Filter by content type: `"text"`, `"link"`, or `"code"`
+</ParamField>
+
+<ParamField query="tag" type="string">
+  Filter by tag (minimum 1 character, trimmed)
+</ParamField>
+
+<ParamField query="platform" type="string">
+  Filter by platform (minimum 1 character, trimmed)
+</ParamField>
+
+<ParamField query="page" type="number">
+  Page number for pagination (minimum 1, default: 1)
+</ParamField>
+
+<ParamField query="limit" type="number">
+  Items per page (1-100, default: 20)
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Content items retrieved successfully"
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of content item objects
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata
+  
+  <Expandable title="Meta properties">
+    <ResponseField name="totalCount" type="number">
+      Total number of matching items
+    </ResponseField>
+    <ResponseField name="page" type="number">
+      Current page number
+    </ResponseField>
+    <ResponseField name="limit" type="number">
+      Items per page
+    </ResponseField>
+    <ResponseField name="totalPages" type="number">
+      Total number of pages
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error Responses
+
+- **400 Bad Request** - Invalid query parameters
+- **401 Unauthorized** - Missing or invalid authentication token
+- **500 Internal Server Error** - Server error
+
+---
+
+## Get Content by ID
+
+<RequestExample>
+```bash GET /api/content/:id
+curl -X GET "https://api.archive.com/api/content/60d5ec49f1b2c8b1f8e4e1a1" \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Retrieve a single content item by its ID.
+
+**Authentication Required:** Yes
+
+**Rate Limit:** None (JWT middleware applied)
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Content item ID
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Content item retrieved successfully!"
+</ResponseField>
+
+<ResponseField name="content" type="object">
+  Content item object with all properties
+</ResponseField>
+
+### Error Responses
+
+- **401 Unauthorized** - Missing or invalid authentication token
+- **404 Not Found** - Content item not found or doesn't belong to user
+- **500 Internal Server Error** - Server error
+
+---
+
+## Update Content
+
+<RequestExample>
+```bash PUT /api/content/:id
+curl -X PUT "https://api.archive.com/api/content/60d5ec49f1b2c8b1f8e4e1a1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "title": "Updated Title",
+    "tags": ["updated", "modified"],
+    "description": "This content has been updated"
+  }'
+```
+</RequestExample>
+
+Update an existing content item. All fields are optional and partial updates are supported.
+
+**Authentication Required:** Yes
+
+**Rate Limit:** API rate limiter applied
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Content item ID
+</ParamField>
+
+### Request Body
+
+All fields are optional. Only provide the fields you want to update.
+
+<ParamField body="type" type="string">
+  Content type: `"text"`, `"link"`, or `"code"`
+</ParamField>
+
+<ParamField body="title" type="string">
+  Content title (max 200 characters, trimmed)
+</ParamField>
+
+<ParamField body="description" type="string">
+  Content description (max 1,000 characters, trimmed)
+</ParamField>
+
+<ParamField body="tags" type="array">
+  Array of tag strings (converted to lowercase, trimmed)
+</ParamField>
+
+<ParamField body="content" type="string">
+  Text or code content (1-100,000 characters, trimmed)
+</ParamField>
+
+<ParamField body="url" type="string">
+  Valid URL (trimmed, must be valid URL format)
+</ParamField>
+
+<ParamField body="previewImageUrl" type="string">
+  Preview image URL (must be valid URL format)
+</ParamField>
+
+<ParamField body="platform" type="string">
+  Platform identifier (trimmed)
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Content item updated successfully!"
+</ResponseField>
+
+<ResponseField name="content" type="object">
+  Updated content item object
+</ResponseField>
+
+### Error Responses
+
+- **400 Bad Request** - Validation errors (invalid URL, content too long, etc.)
+- **401 Unauthorized** - Missing or invalid authentication token
+- **404 Not Found** - Content item not found or doesn't belong to user
+- **500 Internal Server Error** - Server error
+
+---
+
+## Delete Content
+
+<RequestExample>
+```bash DELETE /api/content/:id
+curl -X DELETE "https://api.archive.com/api/content/60d5ec49f1b2c8b1f8e4e1a1" \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Permanently delete a content item.
+
+**Authentication Required:** Yes
+
+**Rate Limit:** API rate limiter applied
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Content item ID
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Content item deleted successfully!"
+</ResponseField>
+
+### Error Responses
+
+- **401 Unauthorized** - Missing or invalid authentication token
+- **404 Not Found** - Content item not found or doesn't belong to user
+- **500 Internal Server Error** - Server error
+
+---
+
+## Get Platforms
+
+<RequestExample>
+```bash GET /api/content/platforms
+curl -X GET "https://api.archive.com/api/content/platforms" \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Retrieve all platforms used in the user's content items along with their counts.
+
+**Authentication Required:** Yes
+
+**Rate Limit:** None (JWT middleware applied)
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Platforms retrieved successfully"
+</ResponseField>
+
+<ResponseField name="platforms" type="array">
+  Array of platform objects with counts
+  
+  <Expandable title="Platform object">
+    <ResponseField name="name" type="string">
+      Platform name
+    </ResponseField>
+    <ResponseField name="count" type="number">
+      Number of content items for this platform
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error Responses
+
+- **401 Unauthorized** - Missing or invalid authentication token
+- **500 Internal Server Error** - Server error

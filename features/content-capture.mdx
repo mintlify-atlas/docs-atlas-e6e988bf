@@ -1,0 +1,224 @@
+---
+title: Content Capture
+description: Learn how ArcHive's multi-channel content capture system allows you to save links, notes, and code snippets from anywhere
+---
+
+ArcHive provides seamless content capture across multiple platforms and content types, making it effortless to save valuable information the moment you encounter it.
+
+## Supported Content Types
+
+ArcHive supports three main content types, each optimized for different use cases:
+
+<CardGroup cols={3}>
+  <Card title="Links" icon="link">
+    Save web URLs with automatic metadata extraction and screenshots
+  </Card>
+  <Card title="Text Notes" icon="file-text">
+    Capture thoughts, ideas, and written content up to 100,000 characters
+  </Card>
+  <Card title="Code Snippets" icon="code">
+    Store code examples and snippets for future reference
+  </Card>
+</CardGroup>
+
+## Content Capture Methods
+
+### Mobile App Capture
+
+The mobile app provides multiple ways to capture content:
+
+<Steps>
+  <Step title="Using the Floating Action Button (FAB)">
+    The FAB is always accessible at the bottom of your screen, providing quick access to content creation:
+    
+    - Tap the FAB to reveal content type options
+    - Select Link, Text, or Code
+    - Fill in the content details
+    - Save to your archive
+  </Step>
+  
+  <Step title="Share from Any App">
+    Share content directly from other apps into ArcHive:
+    
+    - Open any app (browser, social media, etc.)
+    - Tap the Share button
+    - Select ArcHive from the share sheet
+    - Content is automatically captured with metadata
+  </Step>
+  
+  <Step title="Deep Linking">
+    Open content directly in ArcHive via shared links for quick saving
+  </Step>
+</Steps>
+
+### Chrome Extension
+
+The Chrome extension enables one-click saving from your browser:
+
+<Info>
+The Chrome extension uses secure JWT-based authentication with automatic token refresh and persistent login sessions.
+</Info>
+
+<Steps>
+  <Step title="Install the Extension">
+    Load the extension from the `web` folder in Chrome's developer mode or install from the Chrome Web Store (coming soon)
+  </Step>
+  
+  <Step title="Authenticate">
+    Log in with your ArcHive credentials - your session will persist across browser restarts
+  </Step>
+  
+  <Step title="Save Pages">
+    Click the extension icon while browsing any webpage to instantly archive it with automatic metadata extraction
+  </Step>
+</Steps>
+
+## Content Creation API
+
+Content is captured through the backend API endpoint:
+
+```typescript
+// POST /api/content
+contentRoutes.post(
+  "/",
+  apiRateLimiter,
+  validate("json", createContentSchema),
+  async (c) => {
+    const userId = c.get("user")?._id;
+    const data = c.req.valid("json") as CreateContentInput;
+
+    const newContent = await createContent(userId, data);
+
+    return c.json(
+      {
+        message: "Content created successfully",
+        content: newContent.toObject(),
+      },
+      201,
+    );
+  },
+);
+```
+
+**Source:** `backend/src/routes/content.ts:82-106`
+
+### Content Creation Flow
+
+When you capture content, ArcHive follows this process:
+
+<Steps>
+  <Step title="Parse URL (for Links)">
+    If a URL is provided, ArcHive automatically parses it to extract metadata:
+    
+    ```typescript
+    if (data.url) {
+      const parsedData = await parseUrl(data.url);
+      if (parsedData.title?.length > 200) {
+        parsedData.title = parsedData.title.substring(0, 200);
+      }
+      finalData = { ...finalData, ...parsedData };
+    }
+    ```
+    
+    **Source:** `backend/src/services/content.service.ts:30-36`
+  </Step>
+  
+  <Step title="Create Content Item">
+    A new content item is created in MongoDB with the parsed data
+  </Step>
+  
+  <Step title="Queue Background Jobs">
+    Two asynchronous jobs are queued for processing:
+    
+    - **Screenshot Generation:** Captures a visual preview of the URL
+    - **Tag Generation:** Analyzes content to suggest relevant tags
+    
+    ```typescript
+    screenshotQueue.add("screenshot-queue", {
+      contentId: newContent._id,
+      url: newContent.url,
+      userId: userId,
+    });
+
+    tagQueue.add("generate-tags", {
+      contentId: newContent._id,
+      url: newContent.url,
+    });
+    ```
+    
+    **Source:** `backend/src/services/content.service.ts:44-67`
+  </Step>
+  
+  <Step title="Save and Return">
+    The content is saved to the database and returned to the client immediately
+  </Step>
+</Steps>
+
+<Note>
+Background jobs (screenshot and tag generation) happen asynchronously, so your content is saved instantly without waiting for these processes to complete.
+</Note>
+
+## Content Validation
+
+All captured content is validated using Zod schemas to ensure data integrity:
+
+### Link Content Schema
+
+```typescript
+const linkContentSchema = baseContentSchema.extend({
+  type: z.literal(ContentType.Link).optional(),
+  url: z
+    .string()
+    .trim()
+    .url("Invalid URL format")
+    .min(1, "URL cannot be empty"),
+  content: z.never().optional(),
+});
+```
+
+### Text Content Schema
+
+```typescript
+const textContentSchema = baseContentSchema.extend({
+  type: z.literal(ContentType.Text),
+  content: z
+    .string()
+    .trim()
+    .min(1, "Text content cannot be empty")
+    .max(100000, "Text content cannot exceed 100,000 characters"),
+  url: z.never().optional(),
+});
+```
+
+### Code Content Schema
+
+```typescript
+const codeContentSchema = baseContentSchema.extend({
+  type: z.literal(ContentType.Code),
+  content: z
+    .string()
+    .trim()
+    .min(1, "Code content cannot be empty")
+    .max(100000, "Code content cannot exceed 100,000 characters"),
+  url: z.never().optional(),
+});
+```
+
+**Source:** `backend/src/validation/content.validation.ts:26-54`
+
+## Rate Limiting
+
+<Warning>
+Content creation is rate-limited to prevent abuse. The API uses `apiRateLimiter` middleware to enforce request limits per user.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Intelligent Parsing" icon="brain" href="/features/intelligent-parsing">
+    Learn how ArcHive extracts metadata from URLs
+  </Card>
+  <Card title="Organization" icon="folder" href="/features/organization">
+    Discover how to organize your captured content
+  </Card>
+</CardGroup>

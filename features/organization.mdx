@@ -1,0 +1,325 @@
+---
+title: Content Organization
+description: Learn how to organize, tag, and manage your archived content efficiently in ArcHive
+---
+
+ArcHive provides powerful organization features to help you keep your digital knowledge base structured and easily accessible.
+
+## Content Structure
+
+Each content item in ArcHive follows a well-defined schema:
+
+```typescript
+export interface IContentItem extends Document {
+  userId: Types.ObjectId;
+  type: ContentType;           // "text" | "link" | "code"
+  title?: string;              // Up to 200 characters
+  description?: string;        // Up to 1,000 characters
+  content: string;             // Up to 100,000 characters
+  url?: string;                // Valid URL for links
+  tags: string[];              // Array of tag strings
+  previewImageUrl?: string;    // Cloudinary URL for screenshots
+  platform?: string | null;    // Platform identifier
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+**Source:** `backend/src/db/models/ContentItem.ts:9-21`
+
+## Tagging System
+
+Tags are a powerful way to categorize and find your content:
+
+### Automatic Tag Normalization
+
+All tags are automatically normalized for consistency:
+
+```typescript
+tags: {
+  type: [String],
+  default: [],
+  set: (v: string[]) =>
+    v
+      .map((tag) => tag.trim().toLowerCase())
+      .filter((tag) => tag.length > 0),
+}
+```
+
+**Source:** `backend/src/db/models/ContentItem.ts:56-63`
+
+<Info>
+Tags are automatically converted to lowercase and trimmed, ensuring "JavaScript", "javascript", and " JavaScript " are all treated as the same tag.
+</Info>
+
+### Manual Tagging
+
+You can add custom tags when creating or editing content:
+
+<Steps>
+  <Step title="During Content Creation">
+    Add tags when initially saving content:
+    
+    ```json
+    {
+      "type": "link",
+      "url": "https://example.com",
+      "tags": ["tutorial", "javascript", "web-dev"]
+    }
+    ```
+  </Step>
+  
+  <Step title="Edit Existing Content">
+    Update tags on existing items via the PUT endpoint:
+    
+    ```typescript
+    await updateContent(userId, contentId, {
+      tags: ["updated", "tags", "list"]
+    });
+    ```
+  </Step>
+</Steps>
+
+### Automatic Tag Suggestions
+
+<Note>
+For links, ArcHive automatically generates tag suggestions by analyzing the page content using NLP. These suggestions are processed asynchronously and appear after the initial save.
+</Note>
+
+## Content Types
+
+Organize content by type for focused browsing:
+
+### Type Filtering in the Mobile App
+
+The mobile app provides visual filters for content types:
+
+```typescript
+const contentTypes = ["All", "Link", "Text", "Code"];
+
+// Filter implementation
+findCriteria.type = type;
+```
+
+**UI Flow:**
+1. Tap the search icon in the header
+2. Filter buttons appear below the search bar
+3. Select a type to filter (All, Link, Text, Code)
+4. Content list updates in real-time
+
+**Source:** `archive/app/(tabs)/index.tsx:40-160`
+
+<CardGroup cols={3}>
+  <Card title="Links" icon="link">
+    Web URLs with metadata and screenshots
+  </Card>
+  <Card title="Text" icon="file-text">
+    Notes, thoughts, and written content
+  </Card>
+  <Card title="Code" icon="code">
+    Code snippets and examples
+  </Card>
+</CardGroup>
+
+## Updating Content
+
+You can update any aspect of your saved content:
+
+```typescript
+contentRoutes.put(
+  "/:id",
+  apiRateLimiter,
+  validate("json", updateContentSchema),
+  async (c) => {
+    const userId = c.get("user")?._id;
+    const contentId = c.req.param("id");
+    const updates = c.req.valid("json") as UpdateContentInput;
+
+    const updatedContent = await updateContent(userId, contentId, updates);
+    return c.json({
+      message: "Content item updated successfully!",
+      content: updatedContent.toObject(),
+    });
+  },
+);
+```
+
+**Source:** `backend/src/routes/content.ts:186-211`
+
+### Update Validation
+
+<Warning>
+Content type cannot be changed after creation. Attempting to change a link to text or vice versa will result in a validation error.
+</Warning>
+
+```typescript
+if (existing && existing.type !== updates.type) {
+  throw new ValidationError(
+    `Content type cannot be changed. Expected ${existing.type}, got ${updates.type}.`,
+  );
+}
+```
+
+**Source:** `backend/src/services/content.service.ts:216-220`
+
+### Updatable Fields
+
+<Accordion title="View all updatable fields">
+  - **title**: Change the title (max 200 characters)
+  - **description**: Update the description (max 1,000 characters)
+  - **tags**: Modify the tag list
+  - **content**: Edit text or code content (max 100,000 characters)
+  - **url**: Update the URL (links only)
+  - **previewImageUrl**: Change the preview image
+  - **platform**: Modify platform categorization
+</Accordion>
+
+## Deleting Content
+
+Remove content you no longer need:
+
+```typescript
+contentRoutes.delete("/:id", apiRateLimiter, async (c) => {
+  const userId = c.get("user")?._id;
+  const contentId = c.req.param("id");
+
+  await deleteContent(userId, contentId);
+  return c.json(
+    {
+      message: "Content item deleted successfully!",
+    },
+    200,
+  );
+});
+```
+
+**Source:** `backend/src/routes/content.ts:214-232`
+
+<Info>
+Deletion only works for content you own. Attempting to delete another user's content will result in a 404 error.
+</Info>
+
+## Full-Text Search Index
+
+ArcHive maintains a full-text search index for fast retrieval:
+
+```typescript
+ContentItemSchema.index(
+  {
+    title: "text",
+    description: "text",
+    content: "text",
+    url: "text",
+    tags: "text",
+  },
+  {
+    name: "ContentItemTextIndex",
+    weights: {
+      title: 10,
+      tags: 5,
+      description: 3,
+      content: 1,
+      url: 1,
+    },
+  },
+);
+```
+
+**Source:** `backend/src/db/models/ContentItem.ts:80-98`
+
+<Tip>
+The search index is weighted, meaning matches in titles (weight: 10) are ranked higher than matches in content (weight: 1).
+</Tip>
+
+## Platform Index
+
+For efficient platform-based browsing, ArcHive maintains a compound index:
+
+```typescript
+ContentItemSchema.index({ userId: 1, platform: 1 });
+```
+
+**Source:** `backend/src/db/models/ContentItem.ts:100`
+
+This enables fast queries like "Show me all my GitHub repositories" or "Find my YouTube videos."
+
+## Pagination
+
+All content queries support pagination to handle large collections:
+
+```typescript
+const skip = (page - 1) * limit;
+
+let contentsQuery = ContentItem.find(findCriteria)
+  .sort({ createdAt: -1 })
+  .skip(skip)
+  .limit(limit);
+```
+
+**Source:** `backend/src/services/content.service.ts:165-170`
+
+**Default Pagination:**
+- Default page size: 20 items
+- Maximum page size: 100 items
+- Sort order: Most recent first (createdAt descending)
+
+## Mobile App Organization Features
+
+### Infinite Scroll
+
+The mobile app uses TanStack Query for optimized infinite scrolling:
+
+```typescript
+const {
+  data,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
+  refetch,
+  isRefetching,
+} = useInfiniteQuery({
+  queryKey: ["contents", debouncedSearchQuery, selectedContentType],
+  queryFn: async ({ pageParam = 1 }) => {
+    const response = await getContent(
+      debouncedSearchQuery,
+      pageParam,
+      10,
+      selectedContentType === "All" ? undefined : selectedContentType.toLowerCase(),
+    );
+    return response;
+  },
+  getNextPageParam: (lastPage) => {
+    if (lastPage.meta.page < lastPage.meta.totalPages) {
+      return lastPage.meta.page + 1;
+    }
+    return undefined;
+  },
+  initialPageParam: 1,
+});
+```
+
+**Source:** `archive/app/(tabs)/index.tsx:52-82`
+
+### Pull to Refresh
+
+All content lists support pull-to-refresh for manual updates:
+
+```typescript
+<ContentList
+  contentItems={content || []}
+  onRefresh={refetch}
+  refreshing={isRefetching}
+  // ...
+/>
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Search" icon="search" href="/features/search">
+    Learn about powerful search capabilities
+  </Card>
+  <Card title="Platform Categorization" icon="layer-group" href="/features/platform-categorization">
+    Browse content by platform
+  </Card>
+</CardGroup>

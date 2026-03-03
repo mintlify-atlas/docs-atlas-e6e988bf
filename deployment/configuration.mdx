@@ -1,0 +1,362 @@
+---
+title: Configuration
+description: Environment variables and configuration settings for ArcHive backend
+---
+
+Configure the ArcHive backend using environment variables in the `.env` file.
+
+## Environment File Setup
+
+Create the `.env` file from the example template:
+
+```bash
+cd backend
+cp .env.example .env
+nano .env
+```
+
+<Warning>
+Never commit the `.env` file to version control. It should be listed in `.gitignore` and contain sensitive credentials.
+</Warning>
+
+## Environment Variables
+
+### Server Configuration
+
+```bash
+# Environment mode
+NODE_ENV=production
+
+# Server port (should match PM2 and Nginx config)
+PORT=3000
+```
+
+- **NODE_ENV**: Set to `production` for production deployments, `development` for local development
+- **PORT**: Port where the backend API runs (default: 3000)
+
+### Database Configuration
+
+#### MongoDB Connection
+
+```bash
+MONGODB_URI=mongodb://archiveuser:YOUR_ARCHIVE_DB_PASSWORD@localhost:27017/archive?authSource=archive
+```
+
+**Format breakdown:**
+- `mongodb://` - Protocol
+- `archiveuser:YOUR_ARCHIVE_DB_PASSWORD` - Username and password
+- `localhost:27017` - Host and port
+- `archive` - Database name
+- `?authSource=archive` - Authentication database
+
+<Warning>
+Replace `YOUR_ARCHIVE_DB_PASSWORD` with the actual password you set during MongoDB setup. Use a strong, unique password.
+</Warning>
+
+#### Redis Configuration
+
+<CodeGroup>
+```bash Without Password
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+```bash With Password (Recommended)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=YOUR_REDIS_PASSWORD
+```
+</CodeGroup>
+
+### JWT Authentication
+
+JSON Web Tokens are used for user authentication.
+
+```bash
+# JWT access token secret (minimum 32 characters)
+JWT_SECRET=your-super-secret-jwt-key-min-32-chars-long
+
+# Access token expiration
+JWT_EXPIRATION=15m
+
+# Refresh token secret (minimum 32 characters, different from JWT_SECRET)
+REFRESH_TOKEN_SECRET=your-super-secret-refresh-token-key-min-32-chars
+
+# Refresh token expiration
+REFRESH_TOKEN_EXPIRATION=7d
+```
+
+**Generate secure secrets:**
+
+```bash
+# Generate random 32-byte secrets
+openssl rand -base64 32
+```
+
+<Warning>
+Use different secrets for `JWT_SECRET` and `REFRESH_TOKEN_SECRET`. Never reuse secrets from examples or documentation.
+</Warning>
+
+**Expiration formats:**
+- `15m` - 15 minutes
+- `1h` - 1 hour
+- `7d` - 7 days
+- `30d` - 30 days
+
+### CORS Configuration
+
+```bash
+# Allowed origins (comma-separated, no spaces)
+CORS_ORIGINS=https://archive.example.com,https://api.archive.example.com,https://www.archive.example.com
+```
+
+Replace with your actual domain names. Include:
+- Main web app domain
+- API subdomain
+- Any additional subdomains or domains
+
+<Note>
+For mobile apps, you may need to add additional origins or use wildcard patterns during development.
+</Note>
+
+### Cloudinary Configuration
+
+Cloudinary is used for image storage and CDN.
+
+```bash
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+**How to get Cloudinary credentials:**
+
+<Steps>
+  <Step title="Create Account">
+    Sign up at [cloudinary.com](https://cloudinary.com)
+  </Step>
+  <Step title="Access Dashboard">
+    Go to Dashboard after logging in
+  </Step>
+  <Step title="Copy Credentials">
+    Find your Cloud Name, API Key, and API Secret
+  </Step>
+  <Step title="Add to .env">
+    Paste the credentials into your `.env` file
+  </Step>
+</Steps>
+
+### Rate Limiting
+
+Protect your API from abuse with rate limiting.
+
+```bash
+# Time window in milliseconds (900000 = 15 minutes)
+RATE_LIMIT_WINDOW_MS=900000
+
+# Maximum requests per window
+RATE_LIMIT_MAX_REQUESTS=100
+```
+
+**Recommended values:**
+
+| Use Case | Window | Max Requests |
+|----------|--------|-------------|
+| Production | 15 min (900000) | 100 |
+| Development | 15 min (900000) | 1000 |
+| High Traffic | 15 min (900000) | 500 |
+
+## Complete Example Configuration
+
+Here's a complete `.env` file example:
+
+```bash .env
+# Server
+NODE_ENV=production
+PORT=3000
+
+# Database
+MONGODB_URI=mongodb://archiveuser:StrongPassword123!@localhost:27017/archive?authSource=archive
+
+# JWT
+JWT_SECRET=8f3a9b7c2d1e5f6a4b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0
+JWT_EXPIRATION=15m
+REFRESH_TOKEN_SECRET=1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a
+REFRESH_TOKEN_EXPIRATION=7d
+
+# CORS
+CORS_ORIGINS=https://archive.example.com,https://api.archive.example.com,https://www.archive.example.com
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=RedisSecurePass456!
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=my-archive-cloud
+CLOUDINARY_API_KEY=123456789012345
+CLOUDINARY_API_SECRET=abcdefghijklmnopqrstuvwxyz123456
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+```
+
+<Warning>
+This is an example only. Never use these exact values in production. Generate your own unique secrets and passwords.
+</Warning>
+
+## Security Best Practices
+
+### File Permissions
+
+Restrict access to the `.env` file:
+
+<CodeGroup>
+```bash Standard Deployment
+sudo chmod 600 /var/www/archive/backend/.env
+sudo chown www-data:www-data /var/www/archive/backend/.env
+```
+
+```bash CloudPanel Deployment
+chmod 600 /home/archive-api/htdocs/backend/.env
+chown archive-api:archive-api /home/archive-api/htdocs/backend/.env
+```
+</CodeGroup>
+
+### Secret Management Checklist
+
+- [ ] All secrets are unique and randomly generated
+- [ ] JWT secrets are at least 32 characters long
+- [ ] Different secrets used for JWT_SECRET and REFRESH_TOKEN_SECRET
+- [ ] Strong passwords for MongoDB and Redis
+- [ ] `.env` file is not committed to git
+- [ ] `.env` file has restricted permissions (600)
+- [ ] CORS origins are properly configured
+- [ ] Rate limiting is enabled
+
+### Rotating Secrets
+
+To rotate JWT secrets without downtime:
+
+<Steps>
+  <Step title="Add New Secret">
+    Generate a new secret but keep the old one temporarily
+  </Step>
+  <Step title="Update Application">
+    Deploy the new secret while accepting both old and new tokens
+  </Step>
+  <Step title="Wait for Token Expiration">
+    Wait for all old tokens to expire (based on JWT_EXPIRATION)
+  </Step>
+  <Step title="Remove Old Secret">
+    After all old tokens expire, remove the old secret
+  </Step>
+</Steps>
+
+## Environment-Specific Configuration
+
+### Production Environment
+
+```bash
+NODE_ENV=production
+JWT_EXPIRATION=15m
+REFRESH_TOKEN_EXPIRATION=7d
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+```
+
+### Development Environment
+
+```bash
+NODE_ENV=development
+JWT_EXPIRATION=1h
+REFRESH_TOKEN_EXPIRATION=30d
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=1000
+```
+
+## Verifying Configuration
+
+### Check Environment Variables
+
+Verify that environment variables are loaded correctly:
+
+```bash
+# As the application user
+cd backend
+bun run -e 'console.log(process.env.NODE_ENV)'
+```
+
+### Test Database Connections
+
+```bash
+# Test MongoDB
+mongosh "$MONGODB_URI"
+
+# Test Redis (if password is set)
+redis-cli -a "$REDIS_PASSWORD" PING
+```
+
+### Validate Configuration
+
+Start the application and check for errors:
+
+```bash
+pm2 logs archive-api --lines 50
+```
+
+Look for:
+- Successful database connections
+- No authentication errors
+- Server started on correct port
+
+## Troubleshooting
+
+### Environment Variables Not Loading
+
+```bash
+# Check if .env file exists
+ls -la backend/.env
+
+# Verify file permissions
+ls -l backend/.env
+
+# Check file content (be careful not to expose secrets)
+cat backend/.env | grep -v PASSWORD | grep -v SECRET
+```
+
+### Database Connection Failed
+
+```bash
+# Verify MongoDB URI format
+echo $MONGODB_URI
+
+# Test MongoDB connection manually
+mongosh "mongodb://archiveuser:PASSWORD@localhost:27017/archive?authSource=archive"
+
+# Check MongoDB logs
+sudo tail -f /var/log/mongodb/mongod.log
+```
+
+### CORS Errors
+
+```bash
+# Verify CORS_ORIGINS includes your domain
+echo $CORS_ORIGINS
+
+# Make sure there are no spaces in the list
+# Correct: https://example.com,https://api.example.com
+# Incorrect: https://example.com, https://api.example.com
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Backend Deployment" icon="server" href="/deployment/backend">
+    Deploy the backend with PM2
+  </Card>
+  <Card title="Monitoring" icon="chart-line" href="/deployment/monitoring">
+    Set up monitoring and logs
+  </Card>
+</CardGroup>

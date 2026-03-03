@@ -1,0 +1,231 @@
+---
+title: User Profile
+description: API endpoints for managing user profiles, profile pictures, and viewing user statistics
+---
+
+All user endpoints require JWT authentication and are protected by the token blacklist middleware.
+
+## Get User Profile
+
+<RequestExample>
+```bash GET /api/users/profile
+curl -X GET "https://api.archive.com/api/users/profile" \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Retrieve the authenticated user's profile information.
+
+**Authentication Required:** Yes
+
+**Rate Limit:** API rate limiter applied
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+### Response
+
+<ResponseField name="user" type="object">
+  User profile object
+  
+  <Expandable title="User properties">
+    <ResponseField name="_id" type="string">
+      Unique user identifier
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    <ResponseField name="firstName" type="string">
+      User's first name
+    </ResponseField>
+    <ResponseField name="lastName" type="string">
+      User's last name
+    </ResponseField>
+    <ResponseField name="profilePictureUrl" type="string">
+      URL to user's profile picture (if set)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error Responses
+
+- **401 Unauthorized** - Missing or invalid authentication token
+- **500 Internal Server Error** - Server error
+
+---
+
+## Update User Profile
+
+<RequestExample>
+```bash PUT /api/users/profile
+curl -X PUT "https://api.archive.com/api/users/profile" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "firstName": "Jane",
+    "lastName": "Smith"
+  }'
+```
+</RequestExample>
+
+Update the authenticated user's profile information. All fields are optional for partial updates.
+
+**Authentication Required:** Yes
+
+**Rate Limit:** API rate limiter applied
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+### Request Body
+
+All fields are optional. Only provide the fields you want to update.
+
+<ParamField body="firstName" type="string">
+  User's first name (1-50 characters, trimmed)
+</ParamField>
+
+<ParamField body="lastName" type="string">
+  User's last name (1-50 characters, trimmed)
+</ParamField>
+
+<ParamField body="profilePictureUrl" type="string">
+  Valid URL for profile picture (trimmed, must be valid URL format)
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Profile updated successfully"
+</ResponseField>
+
+<ResponseField name="user" type="object">
+  Updated user profile object with all current fields
+</ResponseField>
+
+### Error Responses
+
+- **400 Bad Request** - Validation errors (invalid name length, invalid URL)
+- **401 Unauthorized** - Missing or invalid authentication token
+- **500 Internal Server Error** - Server error
+
+---
+
+## Update Profile Picture
+
+<RequestExample>
+```bash PUT /api/users/profile-picture
+curl -X PUT "https://api.archive.com/api/users/profile-picture" \
+  -H "Authorization: Bearer {accessToken}" \
+  -F "profilePicture=@/path/to/image.jpg"
+```
+</RequestExample>
+
+Upload and update the authenticated user's profile picture. Accepts multipart form data with an image file.
+
+**Authentication Required:** Yes
+
+**Rate Limit:** API rate limiter applied
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+<ParamField header="Content-Type" type="string" required>
+  Must be `multipart/form-data`
+</ParamField>
+
+### Form Data
+
+<ParamField body="profilePicture" type="file" required>
+  Image file for the profile picture. Supported formats depend on server configuration (typically JPEG, PNG, GIF).
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Profile picture updated successfully"
+</ResponseField>
+
+<ResponseField name="user" type="object">
+  Updated user profile object including the new profilePictureUrl
+</ResponseField>
+
+### Error Responses
+
+- **400 Bad Request** - No file uploaded or invalid file format
+- **401 Unauthorized** - Missing or invalid authentication token
+- **413 Payload Too Large** - File size exceeds limit
+- **500 Internal Server Error** - Server error or file upload failure
+
+---
+
+## Get User Statistics
+
+<RequestExample>
+```bash GET /api/users/stats
+curl -X GET "https://api.archive.com/api/users/stats" \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Retrieve usage statistics for the authenticated user's account.
+
+**Authentication Required:** Yes
+
+**Rate Limit:** API rate limiter applied
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+### Response
+
+<ResponseField name="stats" type="object">
+  User statistics object
+  
+  <Expandable title="Stats properties">
+    <ResponseField name="totalContent" type="number">
+      Total number of content items saved
+    </ResponseField>
+    <ResponseField name="contentByType" type="object">
+      Breakdown of content by type
+      
+      <Expandable title="Content type counts">
+        <ResponseField name="text" type="number">
+          Number of text content items
+        </ResponseField>
+        <ResponseField name="link" type="number">
+          Number of link content items
+        </ResponseField>
+        <ResponseField name="code" type="number">
+          Number of code content items
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="totalTags" type="number">
+      Total number of unique tags used
+    </ResponseField>
+    <ResponseField name="totalPlatforms" type="number">
+      Total number of unique platforms
+    </ResponseField>
+    <ResponseField name="accountCreated" type="string">
+      ISO 8601 timestamp of account creation
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error Responses
+
+- **401 Unauthorized** - Missing or invalid authentication token
+- **500 Internal Server Error** - Server error

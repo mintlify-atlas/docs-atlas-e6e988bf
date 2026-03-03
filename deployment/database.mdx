@@ -1,0 +1,409 @@
+---
+title: Database Setup
+description: Install and configure MongoDB and Redis for ArcHive
+---
+
+ArcHive requires MongoDB for persistent data storage and Redis for caching and job queues.
+
+## MongoDB Setup
+
+MongoDB stores all application data including users, collections, and content items.
+
+### Install MongoDB 7.0
+
+<Steps>
+  <Step title="Import MongoDB GPG Key">
+    ```bash
+    curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | \
+       sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+    ```
+  </Step>
+  <Step title="Add MongoDB Repository">
+    ```bash
+    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
+       sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+    ```
+  </Step>
+  <Step title="Update and Install">
+    ```bash
+    sudo apt update
+    sudo apt install -y mongodb-org
+    ```
+  </Step>
+  <Step title="Start MongoDB">
+    ```bash
+    sudo systemctl start mongod
+    sudo systemctl enable mongod
+    ```
+  </Step>
+  <Step title="Verify Status">
+    ```bash
+    sudo systemctl status mongod
+    ```
+  </Step>
+</Steps>
+
+### Create Database and Users
+
+<Warning>
+Always use strong, unique passwords in production. Never use the example passwords shown here.
+</Warning>
+
+<Steps>
+  <Step title="Connect to MongoDB">
+    ```bash
+    mongosh
+    ```
+  </Step>
+  <Step title="Create Admin User">
+    ```javascript
+    use admin
+    db.createUser({
+      user: "admin",
+      pwd: "YOUR_STRONG_PASSWORD",  // Change this!
+      roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+    })
+    ```
+  </Step>
+  <Step title="Create ArcHive Database User">
+    ```javascript
+    use archive
+    db.createUser({
+      user: "archiveuser",
+      pwd: "YOUR_ARCHIVE_DB_PASSWORD",  // Change this!
+      roles: [ { role: "readWrite", db: "archive" } ]
+    })
+    ```
+  </Step>
+  <Step title="Exit MongoDB Shell">
+    ```javascript
+    exit
+    ```
+  </Step>
+</Steps>
+
+### Enable MongoDB Authentication
+
+<Steps>
+  <Step title="Edit MongoDB Configuration">
+    ```bash
+    sudo nano /etc/mongod.conf
+    ```
+  </Step>
+  <Step title="Add Security Settings">
+    Add or modify these lines:
+    ```yaml
+    security:
+      authorization: enabled
+
+    net:
+      bindIp: 127.0.0.1
+      port: 27017
+    ```
+  </Step>
+  <Step title="Save and Exit">
+    Press `Ctrl+X`, then `Y`, then `Enter`
+  </Step>
+  <Step title="Restart MongoDB">
+    ```bash
+    sudo systemctl restart mongod
+    ```
+  </Step>
+</Steps>
+
+### Test MongoDB Connection
+
+```bash
+# Test with credentials
+mongosh -u archiveuser -p YOUR_ARCHIVE_DB_PASSWORD --authenticationDatabase archive
+```
+
+You should successfully connect to the archive database.
+
+### Create Indexes for Performance
+
+Connect to MongoDB and create text search indexes:
+
+```bash
+mongosh -u archiveuser -p YOUR_ARCHIVE_DB_PASSWORD --authenticationDatabase archive
+```
+
+```javascript
+use archive
+
+// Create text index for full-text search
+db.contentitems.createIndex({
+  title: "text",
+  description: "text",
+  content: "text",
+  url: "text"
+})
+
+// Verify indexes
+db.contentitems.getIndexes()
+
+exit
+```
+
+<Note>
+Indexes are typically created automatically by Mongoose models, but you can create them manually if needed.
+</Note>
+
+## Redis Setup
+
+Redis is used for caching and as a job queue for BullMQ background workers.
+
+### Install Redis
+
+<Steps>
+  <Step title="Install Redis Server">
+    ```bash
+    sudo apt install -y redis-server
+    ```
+  </Step>
+  <Step title="Start Redis">
+    ```bash
+    sudo systemctl start redis-server
+    sudo systemctl enable redis-server
+    ```
+  </Step>
+  <Step title="Verify Status">
+    ```bash
+    sudo systemctl status redis-server
+    ```
+  </Step>
+</Steps>
+
+### Configure Redis
+
+<Steps>
+  <Step title="Edit Redis Configuration">
+    ```bash
+    sudo nano /etc/redis/redis.conf
+    ```
+  </Step>
+  <Step title="Modify Settings">
+    Find and modify these lines:
+    ```conf
+    # Bind to localhost only
+    bind 127.0.0.1 ::1
+
+    # Use systemd for supervision
+    supervised systemd
+
+    # Set maximum memory (adjust based on your VPS RAM)
+    maxmemory 512mb
+
+    # Eviction policy when max memory is reached
+    maxmemory-policy allkeys-lru
+
+    # Set password (optional but recommended)
+    requirepass YOUR_REDIS_PASSWORD
+    ```
+  </Step>
+  <Step title="Save and Restart">
+    ```bash
+    # Save file (Ctrl+X, Y, Enter)
+    sudo systemctl restart redis-server
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+Setting a Redis password is highly recommended for production deployments, even when binding to localhost.
+</Warning>
+
+### Test Redis Connection
+
+```bash
+# Test without password
+redis-cli ping
+# Should return: PONG
+
+# If you set a password:
+redis-cli
+auth YOUR_REDIS_PASSWORD
+ping
+# Should return: PONG
+```
+
+### Redis Memory Configuration
+
+For a 4GB VPS, recommended Redis memory settings:
+
+| VPS RAM | Redis maxmemory |
+|---------|----------------|
+| 4 GB    | 512 MB         |
+| 8 GB    | 1 GB           |
+| 16 GB   | 2 GB           |
+
+## Database Connection Strings
+
+Use these connection strings in your `.env` file:
+
+### MongoDB Connection String
+
+```bash
+MONGODB_URI=mongodb://archiveuser:YOUR_ARCHIVE_DB_PASSWORD@localhost:27017/archive?authSource=archive
+```
+
+### Redis Connection
+
+<CodeGroup>
+```bash Without Password
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+```bash With Password
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=YOUR_REDIS_PASSWORD
+```
+</CodeGroup>
+
+## Database Maintenance
+
+### MongoDB Backup Script
+
+Create an automated backup script:
+
+```bash backup-mongodb.sh
+#!/bin/bash
+
+BACKUP_DIR="/home/archive-api/backups/mongodb"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+MONGODB_USER="archiveuser"
+MONGODB_PASS="YOUR_ARCHIVE_DB_PASSWORD"
+MONGODB_DB="archive"
+
+# Create backup directory
+mkdir -p $BACKUP_DIR
+
+# Create backup
+mongodump --username=$MONGODB_USER --password=$MONGODB_PASS \
+  --authenticationDatabase=$MONGODB_DB --db=$MONGODB_DB \
+  --out=$BACKUP_DIR/$TIMESTAMP
+
+# Compress backup
+tar -czf $BACKUP_DIR/archive_$TIMESTAMP.tar.gz -C $BACKUP_DIR $TIMESTAMP
+rm -rf $BACKUP_DIR/$TIMESTAMP
+
+# Keep only last 7 days of backups
+find $BACKUP_DIR -name "archive_*.tar.gz" -mtime +7 -delete
+
+echo "Backup completed: $BACKUP_DIR/archive_$TIMESTAMP.tar.gz"
+```
+
+Make executable and schedule:
+
+```bash
+chmod +x /root/backup-mongodb.sh
+
+# Add to crontab (daily at 2 AM)
+crontab -e
+
+# Add this line:
+0 2 * * * /root/backup-mongodb.sh >> /var/log/mongodb-backup.log 2>&1
+```
+
+### Restore MongoDB Backup
+
+```bash
+# Extract backup
+tar -xzf /path/to/backup/archive_20240315_020000.tar.gz
+
+# Restore
+mongorestore --username=archiveuser --password=YOUR_ARCHIVE_DB_PASSWORD \
+  --authenticationDatabase=archive --db=archive \
+  /path/to/extracted/backup/archive
+```
+
+## Monitoring Databases
+
+### Check MongoDB Status
+
+```bash
+# Service status
+sudo systemctl status mongod
+
+# View logs
+sudo tail -f /var/log/mongodb/mongod.log
+
+# Check database size
+mongosh -u archiveuser -p YOUR_ARCHIVE_DB_PASSWORD --authenticationDatabase archive --eval "db.stats()"
+```
+
+### Check Redis Status
+
+```bash
+# Service status
+sudo systemctl status redis-server
+
+# View logs
+sudo tail -f /var/log/redis/redis-server.log
+
+# Check memory usage
+redis-cli info memory
+
+# Monitor in real-time
+redis-cli --stat
+```
+
+## Troubleshooting
+
+### MongoDB Connection Refused
+
+```bash
+# Check if MongoDB is running
+sudo systemctl status mongod
+
+# Restart MongoDB
+sudo systemctl restart mongod
+
+# Check logs for errors
+sudo tail -f /var/log/mongodb/mongod.log
+
+# Verify port is listening
+sudo netstat -tulpn | grep :27017
+```
+
+### Redis Connection Issues
+
+```bash
+# Check if Redis is running
+sudo systemctl status redis-server
+
+# Restart Redis
+sudo systemctl restart redis-server
+
+# Test connection
+redis-cli ping
+
+# Check logs
+sudo tail -f /var/log/redis/redis-server.log
+```
+
+### Authentication Failed
+
+```bash
+# Verify user exists
+mongosh
+use admin
+db.system.users.find()
+
+# Reset user password if needed
+use archive
+db.updateUser("archiveuser", { pwd: "NEW_PASSWORD" })
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Backend Deployment" icon="server" href="/deployment/backend">
+    Deploy the Node.js backend with PM2
+  </Card>
+  <Card title="Configuration" icon="gear" href="/deployment/configuration">
+    Configure environment variables
+  </Card>
+</CardGroup>

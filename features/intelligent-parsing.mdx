@@ -1,0 +1,331 @@
+---
+title: Intelligent Parsing
+description: Understand how ArcHive automatically extracts metadata, generates screenshots, and suggests tags for your saved content
+---
+
+ArcHive's intelligent parsing system automatically processes URLs to extract rich metadata, ensuring your archived content is well-organized and easy to find.
+
+## Parser Architecture
+
+ArcHive uses a multi-tiered parsing system that selects the appropriate parser based on the URL's domain:
+
+```typescript
+export const parseUrl = async (url: string) => {
+  let parsedResult = null;
+
+  if (url.includes("github.com")) {
+    parsedResult = await githubParser(url);
+  } else if (url.includes("instagram.com")) {
+    parsedResult = await instagramParser(url);
+  } else if (url.includes("youtube.com")) {
+    parsedResult = await youtubeParser(url);
+  } else if (url.includes("linkedin.com")) {
+    parsedResult = await linkedInParser(url);
+  } else if (url.includes("twitter.com") || url.includes("x.com")) {
+    parsedResult = await xParser(url);
+  }
+
+  if (parsedResult) {
+    return parsedResult;
+  }
+
+  return genericParser(url);
+};
+```
+
+**Source:** `backend/src/parsers/index.ts:19-39`
+
+## Specialized Parsers
+
+### GitHub Parser
+
+For GitHub repositories, ArcHive uses the GitHub API to fetch rich repository data:
+
+<Steps>
+  <Step title="Extract Repository Information">
+    Parse the URL to extract owner and repository name:
+    
+    ```typescript
+    const parts = url.split("/");
+    const owner = parts[3];
+    const repo = parts[4];
+    ```
+  </Step>
+  
+  <Step title="Fetch from GitHub API">
+    Query the GitHub API for repository details:
+    
+    ```typescript
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}`;
+    const response = await axios.get(apiUrl);
+    const repoData = response.data;
+    ```
+  </Step>
+  
+  <Step title="Return Structured Data">
+    Extract and return key metadata:
+    
+    ```typescript
+    return {
+      type: "link",
+      title: repoData.full_name,
+      description: repoData.description,
+      url: repoData.html_url,
+      platform: PLATFORMS.GITHUB,
+    };
+    ```
+  </Step>
+</Steps>
+
+**Source:** `backend/src/parsers/github.parser.ts:4-24`
+
+### YouTube Parser
+
+YouTube videos are parsed using the YouTube Data API v3:
+
+<Steps>
+  <Step title="Extract Video ID">
+    Support multiple URL formats (watch, youtu.be, shorts):
+    
+    ```typescript
+    const extractVideoId = (url: string): string | null => {
+      const match = url.match(
+        /(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/shorts\/))([-\w]{11})/,
+      );
+      return match ? match[1] : null;
+    };
+    ```
+  </Step>
+  
+  <Step title="Query YouTube API">
+    Fetch video details using the YouTube Data API:
+    
+    ```typescript
+    const response = await youtube.videos.list({
+      part: ["snippet"],
+      id: [videoId],
+    });
+    ```
+  </Step>
+  
+  <Step title="Extract Thumbnail">
+    Select the highest quality thumbnail available:
+    
+    ```typescript
+    const thumbnail =
+      snippet.thumbnails?.maxres?.url ||
+      snippet.thumbnails?.high?.url ||
+      snippet.thumbnails?.medium?.url ||
+      snippet.thumbnails?.default?.url ||
+      "";
+    ```
+  </Step>
+</Steps>
+
+**Source:** `backend/src/parsers/youtube.parser.ts:17-85`
+
+<Tip>
+The YouTube parser requires a `YOUTUBE_API_KEY` environment variable to be configured.
+</Tip>
+
+### X/Twitter Parser
+
+X (Twitter) content is parsed using Puppeteer for dynamic content rendering:
+
+```typescript
+export const xParser = async (url: string) => {
+  const browser = await browserManager.getBrowser();
+  const page = await browser.newPage();
+
+  try {
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+
+    const metadata = await page.evaluate(() => {
+      const getMetaContent = (property: string) =>
+        document
+          .querySelector(`meta[property="${property}"]`)
+          ?.getAttribute("content") || "";
+      
+      const title =
+        getMetaContent("og:title") ||
+        document.querySelector("title")?.textContent ||
+        "";
+      const description = getMetaContent("og:description") || "";
+      const previewImageUrl = getMetaContent("og:image") || "";
+
+      return { title, description, previewImageUrl };
+    });
+
+    return {
+      type: "link",
+      title: metadata.title.trim(),
+      description: metadata.description ? metadata.description.trim() : "",
+      url: url,
+      previewImageUrl: metadata.previewImageUrl || "",
+      platform: PLATFORMS.TWITTER,
+    };
+  } finally {
+    await page.close();
+  }
+};
+```
+
+**Source:** `backend/src/parsers/x.parser.ts:14-72`
+
+### Generic Parser
+
+For all other URLs, the generic parser uses Open Graph and meta tags:
+
+```typescript
+export const genericParser = async (url: string, headers?: any) => {
+  const response = await axios.get(url, { headers });
+  const html = response.data;
+  const $ = cheerio.load(html);
+
+  const rawTitle =
+    $('meta[property="og:title"]').attr("content") || $("title").text();
+  const title = rawTitle ? rawTitle.trim() : "";
+  const description =
+    $('meta[property="og:description"]').attr("content") ||
+    $('meta[name="description"]').attr("content");
+  const previewImageUrl = $('meta[property="og:image"]').attr("content");
+
+  return {
+    type: "link",
+    title: title.trim(),
+    description: description ? description.trim() : "",
+    url: url,
+    previewImageUrl: previewImageUrl || "",
+    platform: extractPlatformFromUrl(url),
+  };
+};
+```
+
+**Source:** `backend/src/parsers/generic.parser.ts:5-26`
+
+## Automatic Screenshot Generation
+
+For every link saved, ArcHive generates a screenshot using Puppeteer:
+
+<Info>
+Screenshot generation happens asynchronously via a BullMQ queue, so it doesn't slow down content creation.
+</Info>
+
+The screenshot queue is triggered after content creation:
+
+```typescript
+screenshotQueue
+  .add("screenshot-queue", {
+    contentId: newContent._id,
+    url: newContent.url,
+    userId: userId,
+  })
+  .catch((err) =>
+    console.error("Failed to enqueue screenshot job", {
+      contentId: newContent._id,
+      error: err,
+    }),
+  );
+```
+
+**Source:** `backend/src/services/content.service.ts:44-55`
+
+Screenshots are stored on Cloudinary for fast, reliable access.
+
+## Intelligent Tag Generation
+
+ArcHive automatically suggests tags by analyzing the content:
+
+### Tag Generation Process
+
+<Steps>
+  <Step title="Extract Content">
+    Try to get content from the parsed metadata first:
+    
+    ```typescript
+    const genericParsed = await parseUrl(url);
+    if (genericParsed?.description) {
+      return extractRelevantTags(genericParsed.description);
+    }
+    ```
+  </Step>
+  
+  <Step title="Fallback to Web Scraping">
+    If no description is available, use Puppeteer to scrape the page:
+    
+    - Check meta keywords
+    - Extract Open Graph description
+    - Parse article content
+    - Use Mozilla Readability for content extraction
+  </Step>
+  
+  <Step title="Extract and Stem Tags">
+    Process the text to extract meaningful tags:
+    
+    - Tokenize the text
+    - Apply Porter Stemming algorithm
+    - Filter and rank by relevance
+  </Step>
+</Steps>
+
+**Source:** `backend/src/utils/generateTagsFromUrl.ts:48-130`
+
+<Note>
+Tags are processed using natural language processing (NLP) with the Porter Stemmer algorithm to ensure consistency (e.g., "running" and "run" become the same tag).
+</Note>
+
+## Platform Detection
+
+ArcHive automatically categorizes content by platform:
+
+```typescript
+export const extractPlatformFromUrl = (url: string): string => {
+  const urlObj = new URL(url);
+  const hostname = urlObj.hostname.toLowerCase();
+  const domain = hostname.replace(/^www\./, "");
+
+  if (domain.includes("github.com")) return PLATFORMS.GITHUB;
+  if (domain.includes("youtube.com") || domain.includes("youtu.be"))
+    return PLATFORMS.YOUTUBE;
+  if (domain.includes("twitter.com") || domain.includes("x.com"))
+    return PLATFORMS.TWITTER;
+  if (domain.includes("instagram.com")) return PLATFORMS.INSTAGRAM;
+  // ... more platforms
+
+  return domain || PLATFORMS.OTHER;
+};
+```
+
+**Source:** `backend/src/constants/platforms.ts:26-67`
+
+### Supported Platforms
+
+<Accordion title="View all supported platforms">
+  - GitHub
+  - YouTube
+  - Twitter/X
+  - Instagram
+  - LinkedIn
+  - Reddit
+  - Medium
+  - Stack Overflow
+  - Facebook
+  - TikTok
+  - Twitch
+  - Pinterest
+  - Vimeo
+  - Discord
+  - Telegram
+  - Other (custom domains)
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Platform Categorization" icon="layer-group" href="/features/platform-categorization">
+    Learn how to browse content by platform
+  </Card>
+  <Card title="Search" icon="search" href="/features/search">
+    Discover powerful search capabilities
+  </Card>
+</CardGroup>

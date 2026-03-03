@@ -1,0 +1,493 @@
+---
+title: Search
+description: Master ArcHive's powerful full-text search with filtering, recent history, and intelligent matching
+---
+
+ArcHive provides a comprehensive search system that helps you find exactly what you need from your personal knowledge base.
+
+## Full-Text Search
+
+Search across all your content using MongoDB's text search index:
+
+```typescript
+if (q) {
+  const searchRegex = new RegExp(q, "i");
+  findCriteria.$or = [
+    { title: searchRegex },
+    { description: searchRegex },
+    { content: searchRegex },
+    { url: searchRegex },
+    { tags: searchRegex },
+  ];
+}
+```
+
+**Source:** `backend/src/services/content.service.ts:138-147`
+
+<Info>
+Search is case-insensitive and matches partial words, so searching for "java" will find "JavaScript", "java", and "Java".
+</Info>
+
+## Search Index Weights
+
+The search index uses weighted fields to rank results:
+
+```typescript
+ContentItemSchema.index(
+  {
+    title: "text",
+    description: "text",
+    content: "text",
+    url: "text",
+    tags: "text",
+  },
+  {
+    name: "ContentItemTextIndex",
+    weights: {
+      title: 10,       // Highest priority
+      tags: 5,         // Second priority
+      description: 3,  // Third priority
+      content: 1,      // Lower priority
+      url: 1,          // Lower priority
+    },
+  },
+);
+```
+
+**Source:** `backend/src/db/models/ContentItem.ts:80-98`
+
+<Tip>
+Matches in titles are weighted 10x higher than matches in content, so items with your search term in the title will appear first.
+</Tip>
+
+## Search API Endpoint
+
+The search endpoint supports multiple query parameters:
+
+```typescript
+contentRoutes.get(
+  "/",
+  searchRateLimiter,
+  validate("query", searchContentQuerySchema),
+  async (c) => {
+    const userId = c.get("user")?._id;
+    const queryParams = c.req.valid("query") as SearchContentQuery;
+
+    const result = await getContents(userId, queryParams);
+    return c.json(
+      {
+        message: "Content items retrieved successfully",
+        data: result.contents.map((item) => item.toObject()),
+        meta: {
+          totalCount: result.totalCount,
+          page: result.page,
+          limit: result.limit,
+          totalPages: result.totalPages,
+        },
+      },
+      200,
+    );
+  },
+);
+```
+
+**Source:** `backend/src/routes/content.ts:110-140`
+
+### Query Parameters
+
+<ParamField query="q" type="string">
+  Search term to match against title, description, content, URL, and tags
+</ParamField>
+
+<ParamField query="type" type="enum">
+  Filter by content type: `link`, `text`, or `code`
+</ParamField>
+
+<ParamField query="tag" type="string">
+  Filter by specific tag (stemmed for consistency)
+</ParamField>
+
+<ParamField query="platform" type="string">
+  Filter by platform (e.g., `github`, `youtube`)
+</ParamField>
+
+<ParamField query="limit" type="number" default="20">
+  Number of results per page (1-100)
+</ParamField>
+
+<ParamField query="page" type="number" default="1">
+  Page number for pagination
+</ParamField>
+
+### Example Requests
+
+<CodeGroup>
+```bash Simple Search
+GET /api/content?q=javascript
+```
+
+```bash Search with Type Filter
+GET /api/content?q=tutorial&type=link
+```
+
+```bash Search by Tag
+GET /api/content?tag=web-dev&limit=50
+```
+
+```bash Platform + Search
+GET /api/content?q=react&platform=github
+```
+
+```bash Combined Filters
+GET /api/content?q=api&type=code&tag=nodejs&page=2&limit=25
+```
+</CodeGroup>
+
+## Mobile App Search Interface
+
+### Search UI Flow
+
+The mobile app provides an intuitive search experience:
+
+<Steps>
+  <Step title="Activate Search">
+    Tap the search icon in the header:
+    
+    ```typescript
+    const toggleSearch = () => {
+      setIsSearchVisible(!isSearchVisible);
+      setSearchQuery("");
+      headerHeight.value = withTiming(isSearchVisible ? 100 : 120, {
+        duration: 300,
+        easing: Easing.inOut(Easing.ease),
+      });
+    };
+    ```
+    
+    **Source:** `archive/app/(tabs)/index.tsx:92-99`
+  </Step>
+  
+  <Step title="Enter Search Query">
+    Type in the search box with auto-focus and 300ms debounce:
+    
+    ```typescript
+    const useDebounce = (value: string, delay: number) => {
+      const [debouncedValue, setDebouncedValue] = useState(value);
+
+      useEffect(() => {
+        const handler = setTimeout(() => {
+          setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+          clearTimeout(handler);
+        };
+      }, [value, delay]);
+
+      return debouncedValue;
+    };
+    ```
+    
+    **Source:** `archive/app/(tabs)/index.tsx:24-38`
+  </Step>
+  
+  <Step title="View Results">
+    Results update automatically as you type, with infinite scroll for pagination
+  </Step>
+  
+  <Step title="Apply Filters">
+    Use type filters (All, Link, Text, Code) to narrow results
+  </Step>
+</Steps>
+
+### Search Query Hook
+
+```typescript
+const {
+  data,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
+  refetch,
+  isRefetching,
+} = useInfiniteQuery({
+  queryKey: ["contents", debouncedSearchQuery, selectedContentType],
+  queryFn: async ({ pageParam = 1 }) => {
+    if (debouncedSearchQuery) {
+      await addRecentSearch(debouncedSearchQuery);
+    }
+    const response = await getContent(
+      debouncedSearchQuery,
+      pageParam,
+      10,
+      selectedContentType === "All" ? undefined : selectedContentType.toLowerCase(),
+    );
+    return response;
+  },
+  getNextPageParam: (lastPage) => {
+    if (lastPage.meta.page < lastPage.meta.totalPages) {
+      return lastPage.meta.page + 1;
+    }
+    return undefined;
+  },
+  initialPageParam: 1,
+});
+```
+
+**Source:** `archive/app/(tabs)/index.tsx:52-82`
+
+## Recent Search History
+
+ArcHive tracks your recent searches for quick access:
+
+### Storing Recent Searches
+
+```typescript
+if (debouncedSearchQuery) {
+  await addRecentSearch(debouncedSearchQuery);
+}
+```
+
+**Source:** `archive/app/(tabs)/index.tsx:63-64`
+
+### Displaying Recent Searches
+
+When the search box is active but empty, recent searches appear:
+
+```typescript
+useEffect(() => {
+  if (isSearchVisible && !debouncedSearchQuery) {
+    getRecentSearches().then(setRecentSearches);
+  }
+}, [isSearchVisible, debouncedSearchQuery]);
+```
+
+**Source:** `archive/app/(tabs)/index.tsx:86-90`
+
+### Recent Search UI
+
+```typescript
+{isSearchVisible && recentSearches.length > 0 ? (
+  <View style={styles.recentSearchesContainer}>
+    <View style={styles.recentSearchesHeader}>
+      <FontAwesome5 name="history" size={20} color={colors.primary} />
+      <Text style={[styles.recentSearchesTitle, { color: colors.text }]}>
+        Recent Searches
+      </Text>
+    </View>
+    <View style={styles.recentSearchesList}>
+      {recentSearches.map((term) => (
+        <TouchableOpacity
+          key={term}
+          onPress={() => setSearchQuery(term)}
+          style={[styles.recentSearchItem, { backgroundColor: colors.card }]}
+        >
+          <FontAwesome5 name="search" size={14} color={colors.secondary} />
+          <Text style={[styles.recentSearchText, { color: colors.text }]}>
+            {term}
+          </Text>
+          <FontAwesome5 name="arrow-right" size={14} color={colors.secondary} />
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+)}
+```
+
+**Source:** `archive/app/(tabs)/index.tsx:223-263`
+
+<Note>
+Tapping a recent search term instantly performs that search again, saving you time on repeated queries.
+</Note>
+
+## Content Type Filtering
+
+Visual filter buttons appear below the search bar:
+
+```typescript
+const contentTypes = ["All", "Link", "Text", "Code"];
+
+<View style={styles.filterContainer}>
+  {contentTypes.map((type) => {
+    const isSelected = selectedContentType === type;
+    const getIcon = () => {
+      switch (type) {
+        case "Link": return "link";
+        case "Text": return "file-text";
+        case "Code": return "code";
+        default: return "th-large";
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        key={type}
+        style={[
+          styles.filterButton,
+          isSelected && {
+            backgroundColor: colors.primary,
+            borderColor: colors.primary,
+            shadowColor: colors.primary,
+          },
+        ]}
+        onPress={() => setSelectedContentType(type)}
+      >
+        <FontAwesome5
+          name={getIcon()}
+          size={14}
+          color={isSelected ? "#FFFFFF" : colors.secondary}
+        />
+        <Text style={[styles.filterButtonText]}>
+          {type}
+        </Text>
+      </TouchableOpacity>
+    );
+  })}
+</View>
+```
+
+**Source:** `archive/app/(tabs)/index.tsx:144-196`
+
+## Tag-Based Search
+
+Search by tags using Porter Stemming for consistency:
+
+```typescript
+if (tag) {
+  const stemmedTag = natural.PorterStemmer.stem(tag.toLowerCase());
+  findCriteria.tags = { $in: [stemmedTag] };
+}
+```
+
+**Source:** `backend/src/services/content.service.ts:153-156`
+
+<Info>
+Tag search uses stemming, so searching for "running" will also find items tagged with "run" or "runner".
+</Info>
+
+## Search Rate Limiting
+
+<Warning>
+Search requests are rate-limited separately from other API calls using the `searchRateLimiter` middleware to ensure fair usage and system stability.
+</Warning>
+
+**Source:** `backend/src/routes/content.ts:112`
+
+## Empty States
+
+ArcHive provides contextual empty states for different scenarios:
+
+### Search Empty State
+
+```typescript
+emptyStateType={
+  debouncedSearchQuery
+    ? "search"
+    : selectedContentType !== "All"
+      ? "filter"
+      : "default"
+}
+```
+
+**Source:** `archive/app/(tabs)/index.tsx:204-210`
+
+<Accordion title="Empty State Types">
+  - **search**: When search query returns no results
+  - **filter**: When type filter has no matching content
+  - **default**: When you haven't saved any content yet
+</Accordion>
+
+### Search Tips UI
+
+When search is active but no query entered:
+
+```typescript
+<View style={styles.emptySearchContainer}>
+  <View style={[styles.emptySearchIconContainer]}>
+    <FontAwesome5 name="search" size={56} color={colors.primary} />
+  </View>
+  <Text style={[styles.emptySearchTitle, { color: colors.text }]}>
+    Start Your Search
+  </Text>
+  <Text style={[styles.emptySearchDescription, { color: colors.secondary }]}>
+    Type in the search box above to find your saved links, notes, and code snippets
+  </Text>
+  <View style={styles.searchTipsContainer}>
+    <View style={styles.searchTipItem}>
+      <View style={[styles.tipBadge]}>
+        <FontAwesome5 name="lightbulb" size={14} color={colors.primary} />
+      </View>
+      <Text style={[styles.searchTipText, { color: colors.secondary }]}>
+        Search by title, description, or content
+      </Text>
+    </View>
+    <View style={styles.searchTipItem}>
+      <View style={[styles.tipBadge]}>
+        <FontAwesome5 name="filter" size={14} color={colors.primary} />
+      </View>
+      <Text style={[styles.searchTipText, { color: colors.secondary }]}>
+        Use filters to narrow down by type
+      </Text>
+    </View>
+  </View>
+</View>
+```
+
+**Source:** `archive/app/(tabs)/index.tsx:265-326`
+
+## Performance Optimization
+
+### Debounced Search
+
+Search queries are debounced to reduce API calls:
+
+```typescript
+const debouncedSearchQuery = useDebounce(searchQuery, 300);
+```
+
+**Source:** `archive/app/(tabs)/index.tsx:46`
+
+This means the search only executes 300ms after you stop typing, reducing server load and improving responsiveness.
+
+### Pagination
+
+Results are paginated for better performance:
+
+```typescript
+const result = await getContents(userId, queryParams);
+
+return {
+  contents,
+  totalCount,
+  page,
+  limit,
+  totalPages: Math.ceil(totalCount / limit),
+};
+```
+
+**Source:** `backend/src/services/content.service.ts:174-180`
+
+### Infinite Scroll
+
+The mobile app loads more results as you scroll:
+
+```typescript
+onEndReached={() => {
+  if (hasNextPage && !isFetchingNextPage) {
+    fetchNextPage();
+  }
+}}
+```
+
+**Source:** `archive/app/(tabs)/index.tsx:212-216`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Organization" icon="folder" href="/features/organization">
+    Learn about content organization
+  </Card>
+  <Card title="Profile Management" icon="user" href="/features/profile-management">
+    Manage your profile and view statistics
+  </Card>
+</CardGroup>

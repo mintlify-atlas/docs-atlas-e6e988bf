@@ -1,0 +1,261 @@
+---
+title: Web Dashboard
+description: A fully-fledged web application for managing your ArcHive knowledge base from your desktop browser (Coming Soon)
+---
+
+<Note>
+The ArcHive Web Dashboard is currently in development as part of our product roadmap. This page outlines the planned features and functionality.
+</Note>
+
+## Overview
+
+The ArcHive Web Dashboard will be a comprehensive web application that allows you to view, manage, and organize your entire knowledge base seamlessly from a desktop browser. It will provide a full-featured alternative to the mobile app with enhanced capabilities designed specifically for desktop workflows.
+
+## Planned Features
+
+### Full Content Management
+
+Manage all your saved content from a comfortable desktop interface:
+
+- **Browse & Search**: View all your links, text notes, and code snippets with powerful filtering and search
+- **Create & Edit**: Add new content and edit existing items with a full-featured editor
+- **Organize**: Manage tags, metadata, and organization with keyboard shortcuts and bulk operations
+- **Delete**: Remove unwanted items with undo capabilities
+
+### Custom Collections / Folders
+
+<Tip>
+This feature will launch first on the web dashboard before coming to mobile.
+</Tip>
+
+Create dedicated, customized spaces to organize your saved content by specific topics:
+
+**Example Collections:**
+- "Web Development" - Frontend frameworks, CSS tricks, JavaScript tutorials
+- "Data Structures & Algorithms" - LeetCode solutions, algorithm explanations
+- "Machine Learning" - Research papers, ML tutorials, Python notebooks
+- "Inspiration" - Design references, creative ideas, motivation
+
+**Collection Features:**
+- Drag-and-drop organization
+- Custom icons and colors
+- Nested collections for hierarchical organization
+- Quick filters per collection
+- Collection-specific tags
+
+### Desktop-Optimized Interface
+
+**Enhanced Viewing**
+- Multi-column layouts for efficient browsing
+- Side-by-side content comparison
+- Preview pane for quick content review
+- Full-screen reading mode
+
+**Keyboard Shortcuts**
+- Quick content creation (`Ctrl+N`)
+- Search activation (`Ctrl+K`)
+- Navigation between collections
+- Bulk selection and actions
+
+**Rich Editor**
+- Markdown support for text notes
+- Syntax highlighting for code snippets
+- Link preview cards
+- Tag autocomplete
+
+### Platform Analytics
+
+Gain insights into your saved content:
+
+- **Content Statistics**: Visualize your archive growth over time
+- **Platform Breakdown**: See which platforms you save from most
+- **Tag Analytics**: Discover your most-used tags and topics
+- **Activity Heatmap**: Track your saving patterns and habits
+
+### Shared Collections
+
+<Note>
+Shared Collections will be released after the initial Web Dashboard launch.
+</Note>
+
+Share your curated knowledge with other developers:
+
+**Public Collections**
+- Generate public, shareable links for specific collections
+- Choose what to share - entire collections or selected items
+- View-only access for recipients
+- Optional password protection
+
+**Collaboration Features** (Future)
+- Collaborative collections with team members
+- Comments and annotations
+- Contribution permissions
+- Activity tracking
+
+### Import & Export
+
+Full control over your data:
+
+**Import From:**
+- Pocket
+- Instapaper
+- Browser bookmarks (Chrome, Firefox, Safari)
+- Plain text files
+- CSV/JSON formats
+
+**Export To:**
+- JSON (complete data export)
+- Markdown (formatted notes)
+- HTML (web-ready format)
+- CSV (spreadsheet compatible)
+
+### Advanced Search
+
+More powerful search capabilities than mobile:
+
+- **Filters**: Content type, date range, platform, tags, collections
+- **Boolean Operators**: AND, OR, NOT for complex queries
+- **Saved Searches**: Save frequently used search queries
+- **Regular Expressions**: Advanced pattern matching
+- **Search Within**: Limit search to specific collections
+
+### Spaced Repetition / Resurfacing
+
+<Note>
+This feature will be available on both web and mobile platforms.
+</Note>
+
+Transform your archive from passive storage into an active learning tool:
+
+**Smart Notifications**
+- Gentle reminders to revisit older saved items
+- Resurface unread content at optimal intervals
+- Customizable reminder frequency
+- "Snooze" or "Archive" options for each reminder
+
+**Learning Algorithm**
+- Adapts to your reading patterns
+- Prioritizes important content
+- Reduces notification fatigue
+- Respects your preferred times
+
+## Development Timeline
+
+<Steps>
+  <Step title="Phase 1: Core Dashboard (Q2 2026)">
+    - Basic content viewing and management
+    - Search and filtering
+    - Responsive desktop interface
+    - Authentication and profile management
+  </Step>
+  
+  <Step title="Phase 2: Collections (Q3 2026)">
+    - Custom collections/folders
+    - Collection organization and management
+    - Enhanced tagging system
+    - Bulk operations
+  </Step>
+  
+  <Step title="Phase 3: Sharing & Analytics (Q4 2026)">
+    - Shared collections with public links
+    - Platform analytics and insights
+    - Import/export functionality
+    - Advanced search features
+  </Step>
+  
+  <Step title="Phase 4: Smart Features (2027)">
+    - Spaced repetition system
+    - Collaborative collections
+    - AI-powered recommendations
+    - Browser extension deep integration
+  </Step>
+</Steps>
+
+<Warning>
+Timeline dates are estimates and subject to change based on development progress and user feedback.
+</Warning>
+
+## Technical Stack (Planned)
+
+The web dashboard will be built with modern technologies:
+
+**Frontend**
+- **Framework**: Next.js 15 with React 19
+- **Styling**: Tailwind CSS with custom design system
+- **State Management**: Zustand + TanStack Query
+- **Forms**: React Hook Form with Zod validation
+- **Rich Text**: Tiptap or ProseMirror editor
+- **Charts**: Recharts for analytics visualization
+
+**Backend**
+- **API**: Shared with mobile app (Hono + Bun)
+- **Database**: MongoDB (existing infrastructure)
+- **Real-time**: WebSocket support for live updates
+- **CDN**: Cloudinary for images and screenshots
+
+**Deployment**
+- **Hosting**: Vercel for frontend
+- **Database**: MongoDB Atlas
+- **CDN**: Cloudinary + Vercel Edge Network
+
+## Early Access
+
+<Tip>
+Want to be among the first to try the Web Dashboard?
+</Tip>
+
+We'll be offering early access to ArcHive users when the dashboard enters beta testing:
+
+1. **Sign up for the waitlist** via the mobile app (coming soon)
+2. **Receive an invitation** when beta testing begins
+3. **Provide feedback** to help shape the final product
+4. **Get exclusive features** as an early adopter
+
+Early access users will have the opportunity to:
+- Test features before public release
+- Influence product direction with feedback
+- Access beta-exclusive features
+- Receive priority support
+
+## Stay Updated
+
+Follow development progress:
+
+- **GitHub**: Watch the repository for updates and releases
+- **Mobile App**: In-app notifications about new features
+- **Email**: Newsletter updates (opt-in via profile settings)
+
+## Frequently Asked Questions
+
+<AccordionGroup>
+  <Accordion title="When will the Web Dashboard be available?">
+    We're targeting Q2 2026 for the initial release of core functionality. The timeline may adjust based on development progress, but we're committed to delivering a high-quality experience.
+  </Accordion>
+  
+  <Accordion title="Will the Web Dashboard be free?">
+    The basic web dashboard will be available to all ArcHive users at no additional cost. Premium features (like advanced analytics and unlimited shared collections) may be offered as paid upgrades in the future.
+  </Accordion>
+  
+  <Accordion title="Will my data sync between mobile and web?">
+    Yes! The web dashboard will use the same backend API as the mobile app, so all your content will be synchronized in real-time across all platforms.
+  </Accordion>
+  
+  <Accordion title="Can I use the web dashboard offline?">
+    The initial release will require an internet connection. Progressive Web App (PWA) capabilities with offline support may be added in future updates.
+  </Accordion>
+  
+  <Accordion title="Will there be a desktop app?">
+    We're focusing on the web dashboard first to ensure broad compatibility. An Electron-based desktop app may be considered based on user demand.
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Mobile App" icon="mobile" href="/platforms/mobile-app">
+    Available now on iOS and Android
+  </Card>
+  <Card title="Chrome Extension" icon="chrome" href="/platforms/chrome-extension">
+    Save content directly from your browser
+  </Card>
+</CardGroup>

@@ -1,0 +1,118 @@
+---
+title: "API Introduction"
+description: "Overview of the ArcHive REST API, including base URL, tech stack, and versioning"
+---
+
+## Welcome to ArcHive API
+
+The ArcHive API is a RESTful API that enables you to manage your digital content archive programmatically. Built with modern web technologies, it provides endpoints for authentication, content management, and user operations.
+
+## Base URL
+
+All API requests should be made to:
+
+```
+https://api.archive.com/api
+```
+
+For local development:
+
+```
+http://localhost:3000/api
+```
+
+## Tech Stack
+
+The ArcHive API is built with:
+
+- **Hono** - Fast, lightweight web framework
+- **Bun** - High-performance JavaScript runtime
+- **MongoDB** - Document database for data persistence
+- **Zod** - TypeScript-first schema validation
+- **JWT** - Secure token-based authentication
+
+## API Version
+
+Current API version: **v1.1.0**
+
+The API version follows semantic versioning. Breaking changes will be communicated in advance and may result in a new major version.
+
+## Request Format
+
+All requests with a body should be sent as JSON with the appropriate `Content-Type` header:
+
+```bash
+Content-Type: application/json
+```
+
+## Response Format
+
+All API responses are returned in JSON format. Successful responses typically include:
+
+```json
+{
+  "message": "Operation successful",
+  "data": { ... }
+}
+```
+
+Error responses follow this structure:
+
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "statusCode": 400,
+  "errorCode": "ERROR_CODE",
+  "details": { ... }
+}
+```
+
+## Rate Limiting
+
+The API implements rate limiting to ensure fair usage:
+
+- **Authentication endpoints** (`/auth/*`): Standard rate limiting
+- **Token refresh** (`/auth/refresh`): Strict rate limiting
+- Rate limit headers are included in responses
+
+## CORS
+
+The API supports Cross-Origin Resource Sharing (CORS) with the following configuration:
+
+- **Allowed Headers**: `Content-Type`, `Authorization`
+- **Allowed Methods**: `POST`, `GET`, `PUT`, `DELETE`, `OPTIONS`
+- **Max Age**: 600 seconds
+- **Credentials**: Supported
+
+## Health Check
+
+Monitor API health and database connectivity:
+
+```bash
+curl https://api.archive.com/health
+```
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "dbConnected": true
+}
+```
+
+## Body Size Limit
+
+Request bodies are limited to **1MB** maximum size. Larger requests will receive a `413 Request Entity Too Large` error.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/api/authentication">
+    Learn how to authenticate and manage tokens
+  </Card>
+  <Card title="Content API" icon="folder" href="/api/content">
+    Manage your archived content items
+  </Card>
+</CardGroup>

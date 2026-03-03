@@ -1,0 +1,251 @@
+---
+title: Authentication
+description: API endpoints for user authentication, registration, and session management
+---
+
+All authentication endpoints are rate-limited to prevent abuse. Authentication endpoints do not require JWT tokens except for logout.
+
+## Register User
+
+<RequestExample>
+```bash POST /api/auth/register
+curl -X POST https://api.archive.com/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePass123!",
+    "firstName": "John",
+    "lastName": "Doe"
+  }'
+```
+</RequestExample>
+
+Register a new user account and receive authentication tokens.
+
+**Authentication Required:** No
+
+**Rate Limit:** Auth rate limiter applied
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  Valid email address (lowercase, trimmed)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Password meeting security requirements:
+  - Minimum 8 characters
+  - Maximum 64 characters
+  - At least one uppercase letter
+  - At least one lowercase letter
+  - At least one number
+  - At least one special character
+</ParamField>
+
+<ParamField body="firstName" type="string" required>
+  User's first name (1-50 characters, trimmed)
+</ParamField>
+
+<ParamField body="lastName" type="string" required>
+  User's last name (1-50 characters, trimmed)
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Registration successful!"
+</ResponseField>
+
+<ResponseField name="user" type="object">
+  User object containing profile information
+  
+  <Expandable title="User properties">
+    <ResponseField name="_id" type="string">
+      Unique user identifier
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    <ResponseField name="firstName" type="string">
+      User's first name
+    </ResponseField>
+    <ResponseField name="lastName" type="string">
+      User's last name
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="accessToken" type="string">
+  JWT access token for API authentication (short-lived)
+</ResponseField>
+
+<ResponseField name="refreshToken" type="string">
+  JWT refresh token for obtaining new access tokens (long-lived)
+</ResponseField>
+
+### Error Responses
+
+- **400 Bad Request** - Validation errors (invalid email, weak password, missing fields)
+- **409 Conflict** - Email already registered
+- **500 Internal Server Error** - Server error
+
+---
+
+## Login
+
+<RequestExample>
+```bash POST /api/auth/login
+curl -X POST https://api.archive.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePass123!"
+  }'
+```
+</RequestExample>
+
+Authenticate an existing user and receive authentication tokens.
+
+**Authentication Required:** No
+
+**Rate Limit:** Auth rate limiter applied
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  Valid email address (lowercase, trimmed)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Login successful!"
+</ResponseField>
+
+<ResponseField name="user" type="object">
+  User object containing profile information
+  
+  <Expandable title="User properties">
+    <ResponseField name="_id" type="string">
+      Unique user identifier
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    <ResponseField name="firstName" type="string">
+      User's first name
+    </ResponseField>
+    <ResponseField name="lastName" type="string">
+      User's last name
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="accessToken" type="string">
+  JWT access token for API authentication
+</ResponseField>
+
+<ResponseField name="refreshToken" type="string">
+  JWT refresh token for obtaining new access tokens
+</ResponseField>
+
+### Error Responses
+
+- **400 Bad Request** - Validation errors (invalid email, missing password)
+- **401 Unauthorized** - Invalid credentials
+- **500 Internal Server Error** - Server error
+
+---
+
+## Refresh Token
+
+<RequestExample>
+```bash POST /api/auth/refresh
+curl -X POST https://api.archive.com/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+</RequestExample>
+
+Obtain a new access token using a valid refresh token.
+
+**Authentication Required:** No (but requires valid refresh token)
+
+**Rate Limit:** Strict rate limiter applied
+
+### Request Body
+
+<ParamField body="refreshToken" type="string" required>
+  Valid refresh token received from login or registration
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Token refreshed successfully!"
+</ResponseField>
+
+<ResponseField name="accessToken" type="string">
+  New JWT access token
+</ResponseField>
+
+<ResponseField name="refreshToken" type="string">
+  New refresh token (rotation strategy)
+</ResponseField>
+
+### Error Responses
+
+- **400 Bad Request** - Missing or empty refresh token
+- **401 Unauthorized** - Invalid or expired refresh token
+- **500 Internal Server Error** - Server error
+
+---
+
+## Logout
+
+<RequestExample>
+```bash POST /api/auth/logout
+curl -X POST https://api.archive.com/api/auth/logout \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+</RequestExample>
+
+Invalidate the current access token and refresh token, ending the user's session.
+
+**Authentication Required:** Yes (Bearer token in Authorization header)
+
+**Rate Limit:** None (JWT middleware applied)
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+### Request Body
+
+<ParamField body="refreshToken" type="string" required>
+  Refresh token to invalidate (minimum 1 character)
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Logout successful."
+</ResponseField>
+
+### Error Responses
+
+- **400 Bad Request** - Missing refresh token
+- **401 Unauthorized** - Missing or invalid access token
+- **500 Internal Server Error** - Server error

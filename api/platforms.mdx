@@ -1,0 +1,200 @@
+---
+title: Platform Categorization
+description: Understanding platform classification and filtering in ArcHive
+---
+
+ArcHive automatically categorizes content by platform, making it easy to organize and filter your saved items. This page explains how platform categorization works and how to use the platforms endpoint.
+
+## What are Platforms?
+
+Platforms represent the source or origin of your content. When you save a link from Twitter, YouTube, or GitHub, ArcHive automatically detects and categorizes it by platform. This helps you:
+
+- Organize content by source
+- Filter your archive by specific platforms
+- Track which platforms you save content from most often
+- Get insights into your content consumption habits
+
+## Platform Detection
+
+For link-type content items, ArcHive analyzes the URL to automatically detect the platform:
+
+- **twitter.com** or **x.com** → Categorized as "Twitter"
+- **youtube.com** → Categorized as "YouTube"
+- **github.com** → Categorized as "GitHub"
+- **medium.com** → Categorized as "Medium"
+- And many more...
+
+For text and code content types, you can manually set the platform field during creation or update.
+
+## Get Platforms with Counts
+
+<RequestExample>
+```bash GET /api/content/platforms
+curl -X GET "https://api.archive.com/api/content/platforms" \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+This endpoint retrieves all platforms that appear in your content archive, along with the count of items for each platform.
+
+**Authentication Required:** Yes
+
+**Rate Limit:** None (JWT middleware applied)
+
+### Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token: `Bearer {accessToken}`
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message: "Platforms retrieved successfully"
+</ResponseField>
+
+<ResponseField name="platforms" type="array">
+  Array of platform objects, each containing:
+  
+  <Expandable title="Platform object">
+    <ResponseField name="name" type="string">
+      Platform name (e.g., "Twitter", "YouTube", "GitHub")
+    </ResponseField>
+    <ResponseField name="count" type="number">
+      Number of content items saved from this platform
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "message": "Platforms retrieved successfully",
+  "platforms": [
+    {
+      "name": "Twitter",
+      "count": 45
+    },
+    {
+      "name": "YouTube",
+      "count": 23
+    },
+    {
+      "name": "GitHub",
+      "count": 18
+    },
+    {
+      "name": "Medium",
+      "count": 12
+    }
+  ]
+}
+```
+
+### Error Responses
+
+- **401 Unauthorized** - Missing or invalid authentication token
+- **500 Internal Server Error** - Server error
+
+---
+
+## Filtering Content by Platform
+
+Once you know which platforms are in your archive, you can filter your content by platform using the [Get All Content](/api/content#get-all-content) endpoint.
+
+<RequestExample>
+```bash Filter by Platform
+curl -X GET "https://api.archive.com/api/content?platform=twitter" \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+This returns only content items from the specified platform.
+
+### Combined Filtering
+
+You can combine platform filtering with other query parameters:
+
+<RequestExample>
+```bash Combined Filters
+# Get all code snippets from GitHub
+curl -X GET "https://api.archive.com/api/content?platform=github&type=code" \
+  -H "Authorization: Bearer {accessToken}"
+
+# Get all Twitter content tagged as "tech"
+curl -X GET "https://api.archive.com/api/content?platform=twitter&tag=tech" \
+  -H "Authorization: Bearer {accessToken}"
+
+# Search within a specific platform
+curl -X GET "https://api.archive.com/api/content?platform=medium&q=javascript" \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+---
+
+## Setting Platform Manually
+
+When creating or updating content, you can manually specify the platform:
+
+<RequestExample>
+```bash Manual Platform Assignment
+curl -X POST https://api.archive.com/api/content \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "type": "text",
+    "content": "My learning notes from a conference",
+    "title": "Conference Notes",
+    "platform": "conference"
+  }'
+```
+
+```bash Update Platform
+curl -X PUT "https://api.archive.com/api/content/60d5ec49f1b2c8b1f8e4e1a1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '{
+    "platform": "podcast"
+  }'
+```
+</RequestExample>
+
+---
+
+## Use Cases
+
+### Content Organization Dashboard
+
+Use the platforms endpoint to build a dashboard showing your content distribution:
+
+1. Call `GET /api/content/platforms` to get all platforms and counts
+2. Display as a chart or list showing where your content comes from
+3. Click on a platform to filter and view only those items
+
+### Smart Collections
+
+Create dynamic collections based on platforms:
+
+- "My YouTube Watch Later" - All YouTube links
+- "GitHub Stars" - All GitHub repositories
+- "Twitter Bookmarks" - All Twitter/X posts
+- "Reading List" - All Medium and blog articles
+
+### Analytics and Insights
+
+Track your content habits over time:
+
+- Which platforms do you save from most?
+- How has your platform usage changed over time?
+- Discover patterns in your content consumption
+
+### Custom Platform Categories
+
+For content without automatic detection, create your own platform categories:
+
+- "podcast" for podcast episode notes
+- "book" for book highlights
+- "course" for online course materials
+- "conference" for conference notes and slides
